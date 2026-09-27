@@ -152,9 +152,11 @@ The page is a **generator**, not a travel companion. You use it once,
 before the trip:
 
 1. **Trip** — enter your flights and your usual sleep hours.
-2. **Plan** — check the schedule it produced. A strategy note at the top
-   explains why the plan goes the direction it does.
-3. **Export** — send it to your calendar, and save the picture.
+2. **Plan** — check the schedule it produced (a strategy note at the top
+   explains why the plan goes the direction it does), send it to your
+   calendar, and save the picture. Building the plan lands you here
+   directly; calendar export and the picture are cards on this same page,
+   not a separate tab.
 
 Then close the tab. During the trip you live off the **calendar alerts**,
 which fire natively and offline, including mid-flight with the phone in
@@ -186,8 +188,10 @@ once to export it to their calendar. From then on the app opens on Now.
 
 To make it public: use a **public** repository, and the Pages URL works
 for anyone with the link, no account needed. Worth adding to the repo
-description that it is a personal tool, not a clinical one — the
-in-app disclaimer covers the same ground.
+description that it is a personal tool, not a clinical one — the in-app
+disclaimer that used to cover this ground was cut deliberately for a
+single-user deploy (see "Design intent" in `CLAUDE.md`); reinstate it
+before pointing anyone else at the link.
 
 Released under the MIT license (see `LICENSE`), so anyone can fork it.
 

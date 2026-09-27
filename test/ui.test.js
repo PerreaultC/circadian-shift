@@ -44,7 +44,7 @@ test('typing into the boxes and pressing Build produces a plan', () => {
   fillForm($);
   $('#build').click();
   assert.equal(msg($), null, 'refused: ' + msg($));
-  assert.ok($('#pane-export').classList.contains('on'), 'did not land on Export');
+  assert.ok($('#pane-plan').classList.contains('on'), 'did not land on Plan');
   assert.ok(($('#icsText').value || '').length > 1000, 'no calendar produced');
 });
 
@@ -94,4 +94,16 @@ test('a saved trip opens on Plan; a fresh visitor opens on Trip', () => {
   assert.ok(fresh.$('#pane-trip').classList.contains('on'), 'fresh visitor not on Trip');
   const back = loadApp(['plan'], { circshift: saved });
   assert.ok(back.$('#pane-plan').classList.contains('on'), 'returning visitor not on Plan');
+});
+
+test('the strategy line never claims a negative amount of shift', () => {
+  // Regression: with no livability floor, prep nights alone can now reach
+  // further than the flight's own (independently computed) flightShift,
+  // which used to read as "-0.5 h more happens on the flight itself."
+  const saved = JSON.stringify({
+    homeTz: 'America/Phoenix', bed: '22:00', wake: '06:00',
+    legs: PHX_LHR
+  });
+  const app = loadApp(['strategyHtml'], { circshift: saved });
+  assert.doesNotMatch(app.strategyHtml(), /-\d/);
 });

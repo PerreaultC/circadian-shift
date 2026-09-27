@@ -20,11 +20,9 @@ self.addEventListener("fetch", e => {
   const req = e.request;
   if (req.method !== "GET") return;
   const url = new URL(req.url);
-  const isFont = /fonts\.(googleapis|gstatic)\.com$/.test(url.hostname);
 
-  if (url.origin === location.origin || isFont) {
-    // Cache first, refresh in the background. Fonts fall back to the
-    // system stack declared in CSS if they were never cached.
+  if (url.origin === location.origin) {
+    // Cache first, refresh in the background.
     e.respondWith(
       caches.match(req).then(hit => {
         const net = fetch(req).then(res => {

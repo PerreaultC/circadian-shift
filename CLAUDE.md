@@ -86,15 +86,30 @@ them; several were arrived at by reversing an earlier choice.
   calendar alerts. A web page cannot wake you at 04:00, and one you must
   remember to open is no use at 04:00 either. A compact "now" line survives at
   the top of Plan as a convenience, not as the mechanism.
-- **Minimal, to a fault.** Black on white, monospace, hairline rules, no cards,
-  no shadows, no rounded corners. The reference point given was "an emacs-using
-  computer scientist's little open-source project". Prose was cut hard once
-  already; prefer deleting a sentence to adding one.
+- **Minimal, to a fault.** Black on white, hairline rules, no cards, no
+  shadows, no rounded corners. Prose was cut hard, twice now; prefer deleting
+  a sentence to adding one. The page-chrome font is one plain system
+  sans-serif (`Arial,Helvetica,sans-serif`, both `--mono` and `--sans`) —
+  the same stack as the owner's own site, deliberately matched, and no
+  webfont is loaded. That reverses an earlier choice (IBM Plex Mono via
+  Google Fonts for anything with a number in it, "an emacs-using computer
+  scientist's little open-source project"); the downloadable picture still
+  needs *a* monospace font for its character grid, so its canvas text asks
+  for `ui-monospace, monospace` — whatever the system provides, not a
+  specific loaded one.
+- **One page, not three.** Plan and Export used to be separate tabs; Export
+  is gone and its cards (calendar download, the picture, the legend) now
+  render inside Plan, calendar download near the top. Pressing Build lands
+  there directly. Nav is just `trip` / `plan` now.
 - **No settings that do not earn their place.** A standard/aggressive toggle,
   melatonin dose and timing dropdowns, a prep-days slider, and an "earliest
   you'll wake" livability floor were all built and then removed. What
   survives: sleep hours, home zone, the flights. Everything else is fixed in
-  `FIXED` / `DEF_LEAD`.
+  `FIXED` / `DEF_LEAD`. Explanatory prose that didn't earn its place either:
+  the front-page pitch line, the iOS install note, the medical disclaimer,
+  and the "starts 4 days before departure" filler are all gone too — the
+  owner's own call, not a safety-review conclusion, so restore the
+  disclaimer without hesitation if this ever leaves personal use.
 - **Show consequences, not just controls.** Where a setting is kept, the form
   states what it does with the current trip ("2 h before you fly, the flight
   adds 3.5 h, 2 nights to finish after you land") rather than leaving the user
@@ -108,9 +123,9 @@ them; several were arrived at by reversing an earlier choice.
   rotated label, since a photo has no phone-width limit to respect and
   rotating sidesteps the same 2-digit collision without widening the image
   (it stays portrait-shaped, the better to view as a saved photo). There is
-  no more on-screen ASCII preview or "copy the text" button in Export — the
-  picture is the take-away now; the calendar download is the one styled as
-  the primary action.
+  no more on-screen ASCII preview or "copy the text" button — the picture is
+  the take-away now; the calendar download is the one styled as the primary
+  action.
 - **Hand-typed dates.** Native `datetime-local` / `time` pickers were removed
   as fiddly. Fields are plain text with forgiving parsers (`parseTime`,
   `parseWhen`) and canonical reformatting on blur.

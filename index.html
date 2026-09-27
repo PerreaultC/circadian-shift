@@ -19,13 +19,9 @@
     [hidden]{display:none!important}
   </style>
 <title>Circadian Shift</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
-/* Plain black on white. Monospace for anything with a number in it,
-   the system face for the few sentences of prose. No cards, no shadows,
-   no rounded corners &mdash; hairline rules do the dividing. */
+/* Plain black on white, one system sans-serif throughout, no cards, no
+   shadows, no rounded corners &mdash; hairline rules do the dividing. */
 :root{
   color-scheme: light;
   --bg:#ffffff;
@@ -46,8 +42,8 @@
   --c-flight:#767676;
   --c-free:#9a9a9a;
 
-  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
-  --sans:system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;
+  --mono:Arial,Helvetica,sans-serif;
+  --sans:Arial,Helvetica,sans-serif;
 }
 *{box-sizing:border-box}
 html,body{height:100%}
@@ -189,12 +185,10 @@ textarea{
   <nav>
     <button data-p="trip" type="button" aria-current="true">trip</button>
     <button data-p="plan" type="button" aria-current="false">plan</button>
-    <button data-p="export" type="button" aria-current="false">export</button>
   </nav>
 
   <main>
-    <!-- ============ NOW ============ -->
-    <!-- ============ PLAN ============ -->
+    <!-- ============ PLAN + EXPORT, one page ============ -->
     <section class="pane" id="pane-plan">
       <div class="card" id="icsNudge" hidden>
         <h2>One more step</h2>
@@ -211,24 +205,8 @@ textarea{
         <span class="w" id="nowWindow"></span>
         <span class="n" id="nowNext"></span>
       </div>
-          <div id="planList"></div>
-    </section>
-
-
-    <!-- ============ EXPORT ============ -->
-    <section class="pane" id="pane-export">
-      <div class="empty" id="exportEmpty">
-        <h2>Nothing to export yet</h2>
-        <p>Build a plan first.</p>
-      </div>
-      <div id="exportBody" hidden>
-        <div class="card">
-          <h2>How this is meant to work</h2>
-          <p class="sub" style="margin:0">Make the plan here, follow it from your calendar. Alerts fire offline, including mid&#8209;flight.</p>
-        </div>
       <div class="card" id="icsCard" hidden>
         <h2>Calendar export</h2>
-        <p class="sub">Every action as a timed event with an alert.</p>
         <div class="actions">
           <button class="primary" id="icsDl">Download .ics</button>
           <button id="icsShow">Show text</button>
@@ -239,6 +217,7 @@ textarea{
           <div class="actions"><button id="icsCopy">Copy to clipboard</button></div>
         </div>
       </div>
+      <div id="planList"></div>
       <div class="card" id="imgCard" hidden>
         <p class="sub">Save this picture to Photos for a one-glance overview of the week.</p>
         <div id="imgWrap"><img id="planImg" alt="Day-by-day chart of the shift plan" style="width:100%;display:block;border:1px solid var(--rule)"></div>
@@ -259,15 +238,10 @@ textarea{
           <div><i class="dot" style="background:var(--c-flight)"></i>Flight</div>
         </div>
       </div>
-      </div>
     </section>
 
     <!-- ============ TRIP ============ -->
     <section class="pane" id="pane-trip">
-      <div class="card" id="intro">
-        <h2>Circadian Shift</h2>
-        <p class="sub" style="margin:0">Your flights in, a light and sleep schedule out. Stays in this browser.</p>
-      </div>
       <div class="card">
         <h2>Your usual sleep</h2>
         <div class="row">
@@ -279,12 +253,11 @@ textarea{
           <select id="fHomeTz"></select>
         </div>
         <p class="sub" id="tripEffect" style="margin:14px 0 0"></p>
-        <p class="sub" style="margin:8px 0 0">Starts 4 days before departure. Melatonin 1&ndash;3&nbsp;mg and caffeine cut-offs are included.</p>
       </div>
 
       <div class="card">
         <h2>Flights</h2>
-        <p class="sub">Three-letter airport codes. Times exactly as printed on your ticket, including the arrival date if you land the next day. The plan assumes you are out of bed 5&nbsp;hours before take-off.</p>
+        <p class="sub">Three-letter airport codes. Times exactly as printed on your ticket, including the arrival date if you land the next day.</p>
         <div id="legs"></div>
 
         <div style="display:flex;gap:10px;flex-wrap:wrap">
@@ -298,9 +271,6 @@ textarea{
         <button class="ghost" id="reset">Reset</button>
       </div>
       <div class="warn" id="buildMsg" hidden></div>
-
-      <p class="foot" id="installNote">iPhone: open in <b>Safari</b>, Share &rarr; Add to Home Screen to use it offline.</p>
-      <p class="foot">A scheduling tool, not medical advice. Check melatonin use with a physician.</p>
     </section>
   </main>
 
@@ -842,8 +812,12 @@ function strategyHtml(){
     " h in total \u2014 in steps of up to "+plan.rate+" h/day."];
   if(plan.preDays) bits.push(r1(plan.maxPre)+" h of that happens over the "+plan.preDays+
     " night"+(plan.preDays===1?"":"s")+" before you fly, at home.");
-  if(plan.flightIdx>=0) bits.push(r1(plan.flightShift-plan.maxPre)+" h more happens on the flight itself.");
+  /* flightShift is the cumulative shift as of the flight's own cycle, worked
+     out independently of how far the prep nights get \u2014 without a floor on
+     those, they can now reach further than the flight would have on its own,
+     same as the schedule itself takes the max of the two (see buildPlan). */
   const done=Math.max(plan.flightShift,plan.maxPre), remainder=plan.total-done, postNights=plan.nShift-plan.preDays;
+  if(plan.flightIdx>=0&&done-plan.maxPre>0.05) bits.push(r1(done-plan.maxPre)+" h more happens on the flight itself.");
   if(remainder>0.05) bits.push("The remaining "+r1(remainder)+" h happens over "+postNights+
     " night"+(postNights===1?"":"s")+" after you land.");
   if(plan.wrapped) bits.push(shortPlace(plan.destTz)+" is "+r1(Math.abs(plan.mapDiff))+" h "+
@@ -1088,7 +1062,7 @@ async function renderPlanImage(){
   const FS=30, LH=42, PADX=40, PADY=44, TICKH=46;
   const cv=document.createElement("canvas");
   const probe=cv.getContext("2d");
-  probe.font=FS+'px "IBM Plex Mono", ui-monospace, monospace';
+  probe.font=FS+'px ui-monospace, monospace';
   const chw=probe.measureText("0").width;
   const cols=lines.reduce(function(m,l){ return Math.max(m,l.length); },0);
   const W=Math.ceil(cols*chw)+PADX*2, H=lines.length*LH+PADY*2+TICKH;
@@ -1096,7 +1070,7 @@ async function renderPlanImage(){
   cv.width=W*S; cv.height=H*S;
   const g=cv.getContext("2d"); g.scale(S,S);
   g.fillStyle="#ffffff"; g.fillRect(0,0,W,H);
-  g.font=FS+'px "IBM Plex Mono", ui-monospace, monospace';
+  g.font=FS+'px ui-monospace, monospace';
   g.textBaseline="top";
 
   /* Route + date range, above the ruler. */
@@ -1119,7 +1093,7 @@ async function renderPlanImage(){
     g.moveTo(gx(h),tickBase-len); g.lineTo(gx(h),tickBase);
     g.stroke();
   }
-  g.fillStyle="#555555"; g.font='12px "IBM Plex Mono", ui-monospace, monospace';
+  g.fillStyle="#555555"; g.font='12px ui-monospace, monospace';
   g.textAlign="right";
   for(let h=0;h<24;h++){
     g.save();
@@ -1129,7 +1103,7 @@ async function renderPlanImage(){
     g.restore();
   }
   g.textAlign="left";
-  g.font=FS+'px "IBM Plex Mono", ui-monospace, monospace';
+  g.font=FS+'px ui-monospace, monospace';
 
   /* Zone headers, day rows, and the legend, below the ruler. */
   lines.slice(2).forEach(function(l,i){
@@ -1364,9 +1338,6 @@ function rebuild(){
     plan=ok?buildPlan(cfg):null;
   }catch(err){ plan=null; console.error(err); }
   renderNow(); renderPlan();
-  $("#intro").hidden=!!plan;
-  $("#exportEmpty").hidden=!!plan;
-  $("#exportBody").hidden=!plan;
   $("#imgCard").hidden=!plan;
   if(plan){ $("#icsText").value=buildIcs(); buildPlanImage(); }
 }
@@ -1398,7 +1369,7 @@ $("#build").addEventListener("click",()=>{
     if(bad.length){ m.textContent=bad.join("   "); return; }
     cfg.demo=false; save(); rebuild();
     if(!plan){ m.hidden=false; m.textContent="Could not build a plan from those flights. Check the airports and times."; return; }
-    go("export");
+    go("plan");
   }catch(err){
     m.hidden=false;
     m.textContent="Something went wrong building the plan: "+err.message;
@@ -1464,7 +1435,7 @@ async function exportIcs(btn){
   $("#icsBox").hidden=false;
 }
 $("#icsDl").addEventListener("click",()=>exportIcs($("#icsDl")));
-$("#nudgeGo").addEventListener("click",()=>{ markIcs(); $("#icsNudge").hidden=true; go("export"); });
+$("#nudgeGo").addEventListener("click",()=>{ markIcs(); $("#icsNudge").hidden=true; $("#icsCard").scrollIntoView({behavior:"smooth"}); });
 $("#nudgeNo").addEventListener("click",()=>{ markIcs(); $("#icsNudge").hidden=true; });
 $("#imgDl").addEventListener("click",async()=>{
   if(!planImgBlob) await buildPlanImage();
@@ -1472,15 +1443,13 @@ $("#imgDl").addEventListener("click",async()=>{
 });
 $("#loadDemo").addEventListener("click",()=>{
   cfg=JSON.parse(JSON.stringify(DEMO));
-  formFromCfg(); rebuild(); go("export");
+  formFromCfg(); rebuild(); go("plan");
 });
 
 cfg=load();
 if(!cfg.homeTz) cfg.homeTz=Intl.DateTimeFormat().resolvedOptions().timeZone;
 formFromCfg();
 rebuild();
-/* Inside the claude.ai viewer there is no home screen to install to. */
-if(window.claude&&window.claude.use) $("#installNote").hidden=true;
 go(fresh||!plan?"trip":"plan");
 let lastMin=-1;
 setInterval(()=>{
