@@ -62,12 +62,43 @@ starts landing *before* CBTmin, where it delays instead.
   delays shift ~2x faster. Checked automatically.
 - **Once settled**, instructions stop after one consolidation night.
 
+## Design intent
+
+Decisions the owner made explicitly. Treat these as settled unless he reopens
+them; several were arrived at by reversing an earlier choice.
+
+- **The page is a generator, not a travel companion.** You build the plan once
+  before the trip, export it, and close the tab. During the trip you live off
+  calendar alerts. A web page cannot wake you at 04:00, and one you must
+  remember to open is no use at 04:00 either. A compact "now" line survives at
+  the top of Plan as a convenience, not as the mechanism.
+- **Minimal, to a fault.** Black on white, monospace, hairline rules, no cards,
+  no shadows, no rounded corners. The reference point given was "an emacs-using
+  computer scientist's little open-source project". Prose was cut hard once
+  already; prefer deleting a sentence to adding one.
+- **No settings that do not earn their place.** A standard/aggressive toggle,
+  melatonin dose and timing dropdowns, and a prep-days slider were all built
+  and then removed. What survives: sleep hours, home zone, earliest wake, the
+  flights. Everything else is fixed in `FIXED` / `DEF_LEAD`.
+- **Show consequences, not just controls.** Where a setting is kept, the form
+  states what it does with the current trip ("2 h before you fly, the flight
+  adds 3.5 h, 2 nights to finish after you land") rather than leaving the user
+  to infer it.
+- **Pure ASCII output.** The plan picture is an ASCII chart, not a drawn one —
+  it survives any encoding, stays sharp at any zoom, and fits phone width at
+  ~37 columns. A literal arrow character previously rendered as mojibake.
+- **Hand-typed dates.** Native `datetime-local` / `time` pickers were removed
+  as fiddly. Fields are plain text with forgiving parsers (`parseTime`,
+  `parseWhen`) and canonical reformatting on blur.
+- Owner's own hours, used as defaults: **22:00 / 06:00**, Phoenix.
+
 ## Calibration
 
 Validated against real Timeshifter plans for PHX↔LHR. On Timeshifter's own
 inputs (23:00–07:00) the flight night matches exactly and every other night is
 within 15 min; both plans end on the same calendar day in both directions.
-Full tables in `README.md`.
+Full tables in `README.md`; the raw screenshot
+transcriptions and the derivation are in `calibration.md`.
 
 ## Testing
 
@@ -82,11 +113,10 @@ crash. It cannot render, lay out, or fire real events.
 
 ## Known gaps
 
-1. **The page has never been visually verified.** Every check so far has been
-   logic-level. Layout, spacing, font loading, the rendered PNG and mobile
-   behaviour are all unconfirmed. *Highest-value first task: run it in a real
-   browser and look at it.* Suggested: `npx serve .` plus Playwright
-   screenshots at desktop and 390px widths.
+1. ~~The page has never been visually verified.~~ Verified 2026-09-27: served
+   locally and checked in a real browser at desktop and 375px widths. Layout,
+   fonts, the trip/plan/export panes, and the canvas PNG export all render
+   correctly. `npm test` (74 tests) also passes clean.
 2. `.ics` alarms (`VALARM`) are honoured by Apple Calendar but inconsistently
    by Google Calendar, which may substitute its own default reminder.
 3. The airport table holds ~330 codes; anything else falls back to a manual
