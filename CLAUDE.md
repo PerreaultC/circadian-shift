@@ -2,7 +2,8 @@
 
 A jet-lag planner. Input: flights + usual sleep hours. Output: a day-by-day
 schedule of light, darkness, sleep, melatonin and caffeine that walks the
-body clock onto destination time, exported to `.ics` and as an ASCII chart.
+body clock onto destination time, exported to `.ics` and as a color-coded
+picture.
 
 Single static page, no backend, no dependencies, no build step beyond
 `build.py`. Trip state lives in `localStorage`.
@@ -20,7 +21,7 @@ Single static page, no backend, no dependencies, no build step beyond
 
 Script sections in `app-body.html` are numbered in comments: 1 airports,
 2 timezone math, 3 the engine (`buildPlan`), 4 current-state lookup,
-5 state/storage, 6 render, 7 ICS, 7b ASCII chart, 8 trip form, 9 wiring.
+5 state/storage, 6 render, 7 ICS, 7b the plan picture, 8 trip form, 9 wiring.
 
 ## The science, in short
 
@@ -102,8 +103,20 @@ them; several were arrived at by reversing an earlier choice.
   the system provides, not a specific loaded one.
 - **One page, not three.** Plan and Export used to be separate tabs; Export
   is gone and its cards (calendar download, the picture, the legend) now
-  render inside Plan, calendar download near the top. Pressing Build lands
-  there directly. Nav is just `trip` / `plan` now.
+  render inside Plan, in this order: now-line, **Strategy**, **Calendar
+  export**, the day-by-day list, the picture, the legend. Pressing Build
+  lands there directly. Nav is just `trip` / `plan` now. The "One more
+  step" nudge card that used to point at the separate Export tab is gone
+  too — with the calendar-export card always inline, a second card asking
+  the reader to go export their calendar read as two competing prompts
+  for the same action.
+- **Times and a heading, not a paragraph, per event.** The day-by-day list
+  used to carry a description under every event heading ("Get outside.
+  Indoors, a 10,000 lux box."). Dropped from the on-screen row — the
+  heading plus start/end times already say what to do — but `e.d` is
+  untouched in the data model and still is the `.ics` alarm body
+  (`buildIcs`); the calendar notification is the one place that text still
+  earns its keep, read at a glance with no page open at all.
 - **No settings that do not earn their place.** A standard/aggressive toggle,
   melatonin dose and timing dropdowns, a prep-days slider, and an "earliest
   you'll wake" livability floor were all built and then removed. What
@@ -117,18 +130,25 @@ them; several were arrived at by reversing an earlier choice.
   states what it does with the current trip ("2 h before you fly, the flight
   adds 3.5 h, 2 nights to finish after you land") rather than leaving the user
   to infer it.
-- **Pure ASCII output.** The copyable text (`planAscii`) is an ASCII chart,
-  not a drawn one — it survives any encoding, stays sharp at any zoom, and
-  fits phone width at ~37 columns, so its hour ruler stays at 3 h increments
-  (a 2-digit hour needs a spare column on each side). A literal arrow
-  character previously rendered as mojibake. The downloadable picture reuses
-  that grid but draws its own hour ruler on top: every hour gets a tick and a
-  rotated label, since a photo has no phone-width limit to respect and
-  rotating sidesteps the same 2-digit collision without widening the image
-  (it stays portrait-shaped, the better to view as a saved photo). There is
-  no more on-screen ASCII preview or "copy the text" button — the picture is
-  the take-away now; the calendar download is the one styled as the primary
-  action.
+- **Solid color bars, not ASCII.** This reverses the original "Pure ASCII
+  output" choice: the picture used to render the literal character grid
+  (`planAscii`, one `S`/`*`/`#`/`~`/`m` per hour) as monospace text, which
+  meant memorizing a legend to read a glance-able overview. `planAscii` and
+  the character grid are gone entirely — no copyable text version exists any
+  more, on-screen or otherwise. `planRows` (in `renderPlanImage`) now walks
+  the same events but keeps each window's *exact* fractional start/end hour
+  (`f0`/`f1`, not a character index) and draws it as a filled rectangle;
+  `planColors` reads the actual `--c-*` custom properties the Plan page's
+  own event rail uses (hardcoded fallback for the headless test harness,
+  which has no real CSSOM), so the picture and the on-screen list can never
+  show different colors for the same thing. Melatonin and take-off are
+  point markers (a dot, a triangle) rather than a character. Every hour
+  still gets a tick and a rotated label on the ruler — a photo has no
+  phone-width limit to respect — and the canvas text is plain
+  `Arial,Helvetica,sans-serif` now too, since nothing in a bar chart needs
+  a monospace grid the way character art did. The calendar download stays
+  the one styled as the primary action; the picture is the take-away, not
+  the mechanism.
 - **Hand-typed dates.** Native `datetime-local` / `time` pickers were removed
   as fiddly. Fields are plain text with forgiving parsers (`parseTime`,
   `parseWhen`) and canonical reformatting on blur.

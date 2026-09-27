@@ -192,14 +192,6 @@ textarea{
   <main>
     <!-- ============ PLAN + EXPORT, one page ============ -->
     <section class="pane" id="pane-plan">
-      <div class="card" id="icsNudge" hidden>
-        <h2>One more step</h2>
-        <p class="sub">This page can't wake you. Your calendar can.</p>
-        <div class="actions">
-          <button class="primary" id="nudgeGo">Export to calendar</button>
-          <button class="ghost" id="nudgeNo">Not now</button>
-        </div>
-      </div>
       <div class="demobar" id="demo2" hidden>Loaded with the Phoenix&ndash;London trip. Change it, or start your own, under Trip.</div>
       <div class="nowline" id="nowLine" hidden>
         <span class="k">now</span>
@@ -207,6 +199,7 @@ textarea{
         <span class="w" id="nowWindow"></span>
         <span class="n" id="nowNext"></span>
       </div>
+      <div id="strategyCard"></div>
       <div class="card" id="icsCard" hidden>
         <h2>Calendar export</h2>
         <div class="actions">
@@ -764,8 +757,6 @@ function load(){
   fresh=true;
   return JSON.parse(JSON.stringify(EMPTY));
 }
-const seenIcs=()=>{ try{ return !!localStorage.getItem("circshift.ics"); }catch(e){ return false; } };
-const markIcs=()=>{ try{ localStorage.setItem("circshift.ics","1"); }catch(e){} };
 function save(){ try{ localStorage.setItem("circshift",JSON.stringify(cfg)); }catch(e){} }
 
 /* ============================================================
@@ -833,11 +824,11 @@ function renderPlan(){
   const list=$("#planList"); list.innerHTML="";
   if(!plan){
     list.innerHTML='<div class="empty"><h2>No plan yet</h2><p>Enter your flights under Trip and the day-by-day schedule appears here.</p></div>';
-    $("#icsCard").hidden=true; $("#legendCard").hidden=true; $("#icsNudge").hidden=true; return;
+    $("#strategyCard").innerHTML="";
+    $("#icsCard").hidden=true; $("#legendCard").hidden=true; return;
   }
   $("#icsCard").hidden=false; $("#legendCard").hidden=false;
-  $("#icsNudge").hidden=seenIcs();
-  list.innerHTML=strategyHtml();
+  $("#strategyCard").innerHTML=strategyHtml();
   const now=Date.now();
   const groups=new Map();
   for(const e of plan.ev){
@@ -885,8 +876,10 @@ function renderPlan(){
       const t=e.point?fmtTime(e.tz,e.start)
              :fmtTime(e.tz,e.start)+z(e.tz,e.start)+
               "<small>"+fmtTime(e.endTz,e.end)+z(e.endTz,e.end)+"</small>";
+      /* e.d still feeds the calendar export (buildIcs) \u2014 dropped only from
+         this on-screen row, which reads fine off the heading and times alone. */
       d.innerHTML='<div class="t">'+t+'</div><div class="rail"></div><div class="b">'+
-        '<div class="h">'+e.h+'</div><div class="d">'+e.d+"</div>"+
+        '<div class="h">'+e.h+'</div>'+
         (e.note?'<div class="note">'+e.note+"</div>":"")+"</div>";
       g.appendChild(d);
     }
@@ -925,15 +918,9 @@ function buildIcs(){
    7b. THE PLAN AS ONE PICTURE
    ------------------------------------------------------------
    Days down the page, 24 h across, drawn in whatever clock you are
-   living in that day. Meant to be saved to a camera roll and glanced
-   at \u2014 so it carries the shape of the week, not the fine print.
-   ============================================================ */
-/* ============================================================
-   7b. THE PLAN AS ASCII
-   ------------------------------------------------------------
-   One character per hour, 24 across, in whatever clock you are
-   living in that day. Pure ASCII on purpose: nothing here can be
-   mangled by an encoding, and it stays sharp at any zoom.
+   living in that day, as solid color bars in the same colors the Plan
+   page's own event list uses. Meant to be saved to a camera roll and
+   glanced at \u2014 so it carries the shape of the week, not the fine print.
    ============================================================ */
 function dayBounds(tz,ts){
   const p=localParts(tz,ts);
@@ -977,12 +964,15 @@ function showWhen(iso){
   return d[1]+"/"+d[2]+"/"+d[0]+"  "+showTime(a[1]);
 }
 
-const pad=(s,n)=>{ s=String(s); while(s.length<n) s+=" "; return s; };
 const padL=(s,n)=>{ s=String(s); while(s.length<n) s=" "+s; return s; };
-const LAB=9;                      // width of the date column, in characters
 
-function planAscii(){
-  if(!plan) return "";
+/* Per-day bars, not a character grid: {kind,f0,f1} spans and {kind,f}
+   points, f in [0,24) hours across whatever clock that day is living in.
+   Shared by nothing else now \u2014 there is no more copyable text version,
+   so the fractional hour a window starts and ends at is kept exactly
+   rather than snapped to a character cell. */
+function planRows(){
+  if(!plan) return null;
   const groups=new Map();
   for(const e of plan.ev){
     const k=dayKey(e.tz,e.start);
@@ -992,126 +982,146 @@ function planAscii(){
     const [a,b]=dayBounds(f.tz,f.start);
     return {tz:f.tz,a,b};
   });
-
-  const L0=plan.legs[0], LN=plan.legs[plan.legs.length-1];
-  const out=[];
-  out.push(L0.from+" -> "+LN.to+"   "+(plan.dir==="advance"?"advance ":"delay ")+
-           r1(plan.total)+" h at "+plan.rate+" h/day");
-  out.push(fmtDate(rows[0].tz,rows[0].a+12*HOUR)+" - "+
-           fmtDate(rows[rows.length-1].tz,rows[rows.length-1].a+12*HOUR));
-  out.push("");
-
-  const CH={light2:"*",light:"*",dark:"#",nap:"~",sleep:"S"};
-  let zone=null;
   const flown={};                   // a departure instant falls inside two days
                                     // when the clock changes; tag it once
-  for(const r of rows){
-    if(r.tz!==zone){
-      zone=r.tz;
-      out.push(padL("",LAB)+"-- "+shortPlace(zone)+" time --");
-    }
-    const cells=new Array(24).fill(" ");
+  let zone=null;
+  return rows.map(r=>{
+    const zoneChange=r.tz!==zone; zone=r.tz;
+    const bars=[];
     for(const kind of ["light2","light","dark","nap","sleep"]){
       for(const e of plan.ev){
         if(e.k!==kind||e.point) continue;
         const s0=Math.max(e.start,r.a), s1=Math.min(e.end,r.b);
         if(s1<=s0) continue;
-        const i0=Math.floor((s0-r.a)/(r.b-r.a)*24);
-        const i1=Math.ceil((s1-r.a)/(r.b-r.a)*24);
-        for(let i=Math.max(0,i0);i<Math.min(24,i1);i++) cells[i]=CH[kind];
+        bars.push({kind,f0:(s0-r.a)/(r.b-r.a)*24,f1:(s1-r.a)/(r.b-r.a)*24});
       }
     }
+    const points=[];
     for(const e of plan.ev){
       if(e.k!=="mel"||e.h.indexOf("Melatonin")!==0) continue;
       if(e.start<r.a||e.start>=r.b) continue;
-      cells[Math.floor((e.start-r.a)/(r.b-r.a)*24)]="m";
+      points.push({kind:"mel",f:(e.start-r.a)/(r.b-r.a)*24});
     }
-    /* Take-off goes in the grid, not in a trailing column: two-leg trips
-       used to push the line past phone width. */
+    /* Take-off goes in the grid, not a trailing column, same as before. */
     plan.legs.forEach(function(l,li){
       if(l.depTs>=r.a&&l.depTs<r.b&&!flown[li]){
         flown[li]=1;
-        cells[Math.floor((l.depTs-r.a)/(r.b-r.a)*24)]=">";
+        points.push({kind:"flight",f:(l.depTs-r.a)/(r.b-r.a)*24});
       }
     });
     const d=localParts(r.tz,r.a+12*HOUR);
-    const lab=new Intl.DateTimeFormat("en-GB",{timeZone:r.tz,weekday:"short"})
-                .format(new Date(r.a+12*HOUR))+" "+padL(d.d,2);
-    out.push(pad(lab,LAB)+cells.join(""));
-  }
-
-  out.push("");
-  out.push("  S sleep   * light   # block light");
-  out.push("  ~ nap     m melatonin   > take-off");
-  out.push("  coffee: only the 4 h after waking");
-  out.push("  blank = nothing to do");
-  return out.join("\n");
+    const label=new Intl.DateTimeFormat("en-GB",{timeZone:r.tz,weekday:"short"})
+                  .format(new Date(r.a+12*HOUR))+" "+d.d;
+    return {tz:r.tz,a:r.a,zoneChange,zoneName:zoneChange?shortPlace(zone):null,label,bars,points};
+  });
 }
 
-/* The same text, drawn large enough to save to a camera roll \u2014 except the
-   hour ruler, which the copyable text keeps at every 3 h to fit phone width
-   (see planAscii) but the picture draws at every hour, since it is not
-   typed into anything and has the room. Two-digit hours cannot sit
-   side by side in a single character column, so each is rotated instead
-   of widened: that keeps the picture the same portrait shape it would
-   otherwise be, which matters since it is meant to be viewed as a photo
-   saved from a phone held upright. */
+/* Reads the same colors the Plan page's own event list uses, so the
+   picture never needs its own separate palette to fall out of sync with
+   \u2014 with a hardcoded fallback for the headless test harness, which has
+   no real CSSOM. */
+const PLAN_COLORS={light:"#a8690c",light2:"#c2994a",dark:"#4a3f8f",
+  sleep:"#1f5a80",nap:"#6d94b0",mel:"#8f3c60",flight:"#767676"};
+function planColors(){
+  const out={};
+  for(const k in PLAN_COLORS){
+    try{
+      const v=getComputedStyle(document.documentElement).getPropertyValue("--c-"+k).trim();
+      out[k]=v||PLAN_COLORS[k];
+    }catch(e){ out[k]=PLAN_COLORS[k]; }
+  }
+  return out;
+}
+
+/* Solid color bars where the copyable version used to have a plain
+   character per hour \u2014 no legend-decoding needed, just the same colors
+   as the Plan page's own event rows. Days down the page, 24 h across, in
+   whatever clock that day is living in, with an hour tick (and, since a
+   photo has no phone-width limit to respect, a rotated label) for every
+   hour rather than every third. */
 async function renderPlanImage(){
-  const txt=planAscii();
-  if(!txt) return null;
+  const rows=planRows();
+  if(!rows) return null;
   try{ await document.fonts.ready; }catch(e){}
-  const lines=txt.split("\n");
-  const FS=30, LH=42, PADX=40, PADY=44, TICKH=46;
+
+  const COL=planColors(), FONT="Arial, Helvetica, sans-serif";
+  const PADX=44, PADY=44, LABW=112, HOURW=22, BARH=30, ROWGAP=18, ZONEH=24, TICKH=40;
+  const chartW=24*HOURW, W=PADX*2+LABW+chartW;
+  const gx=f=>PADX+LABW+f*HOURW;
+
+  const legendItems=[["Bright light","light"],["Stay in the light","light2"],
+    ["Block light","dark"],["Sleep","sleep"],["In-flight nap","nap"],
+    ["Melatonin","mel"],["Flight","flight"]];
+
+  /* One pass lays out every element \u2014 each op gets the y it will draw at
+     \u2014 which gives the total height before any of it is drawn onto a
+     canvas sized to fit. */
+  const ops=[]; let y=PADY;
+  const put=(h,draw)=>{ ops.push({y,draw}); y+=h; };
+
+  const L0=plan.legs[0], LN=plan.legs[plan.legs.length-1];
+  put(26,(g,y)=>{ g.fillStyle="#222222"; g.font="600 20px "+FONT;
+    g.fillText(L0.from+" -> "+LN.to+"   "+(plan.dir==="advance"?"advance ":"delay ")+
+      r1(plan.total)+" h at "+plan.rate+" h/day",PADX,y); });
+  put(30,(g,y)=>{ g.fillStyle="#555555"; g.font="15px "+FONT;
+    g.fillText(fmtDate(rows[0].tz,rows[0].a+12*HOUR)+" - "+
+      fmtDate(rows[rows.length-1].tz,rows[rows.length-1].a+12*HOUR),PADX,y); });
+
+  put(TICKH,(g,y)=>{
+    const base=y+TICKH-10;
+    g.strokeStyle="#cccccc";
+    for(let h=0;h<24;h++){
+      const len=h%6===0?15:h%3===0?9:5;
+      g.lineWidth=h%6===0?1.5:1;
+      g.beginPath(); g.moveTo(gx(h),base-len); g.lineTo(gx(h),base); g.stroke();
+    }
+    g.fillStyle="#555555"; g.font="11px "+FONT; g.textAlign="right";
+    for(let h=0;h<24;h++){
+      g.save(); g.translate(gx(h),base-16); g.rotate(-Math.PI/2);
+      g.fillText(String(h),0,0); g.restore();
+    }
+    g.textAlign="left";
+  });
+
+  rows.forEach(r=>{
+    if(r.zoneChange) put(ZONEH,(g,y)=>{ g.fillStyle="#767676"; g.font="13px "+FONT;
+      g.fillText(r.zoneName+" time",PADX+LABW,y+7); });
+    put(BARH+ROWGAP,(g,y)=>{
+      g.strokeStyle="#e2e2e2"; g.lineWidth=1;
+      g.beginPath(); g.moveTo(PADX,y+BARH+ROWGAP-1); g.lineTo(W-PADX,y+BARH+ROWGAP-1); g.stroke();
+      for(const b of r.bars){
+        g.fillStyle=COL[b.kind]||"#999999";
+        g.fillRect(gx(b.f0),y,Math.max(1,gx(b.f1)-gx(b.f0)),BARH);
+      }
+      g.fillStyle="#222222"; g.font="600 15px "+FONT;
+      g.fillText(r.label,PADX,y+BARH/2-8);
+      for(const p of r.points){
+        const cx=gx(p.f), cy=y+BARH/2;
+        g.fillStyle=COL[p.kind]||"#333333";
+        if(p.kind==="flight"){
+          g.beginPath(); g.moveTo(cx-6,cy-9); g.lineTo(cx+7,cy); g.lineTo(cx-6,cy+9); g.closePath(); g.fill();
+        }else{
+          g.beginPath(); g.arc(cx,cy,5,0,Math.PI*2); g.fill();
+        }
+      }
+    });
+  });
+
+  y+=8;
+  legendItems.forEach(([label,kind])=>{
+    put(24,(g,y)=>{
+      g.fillStyle=COL[kind]; g.fillRect(PADX,y+5,16,10);
+      g.fillStyle="#333333"; g.font="14px "+FONT; g.fillText(label,PADX+24,y);
+    });
+  });
+
+  const H=y+PADY, S=2;
   const cv=document.createElement("canvas");
-  const probe=cv.getContext("2d");
-  probe.font=FS+'px ui-monospace, monospace';
-  const chw=probe.measureText("0").width;
-  const cols=lines.reduce(function(m,l){ return Math.max(m,l.length); },0);
-  const W=Math.ceil(cols*chw)+PADX*2, H=lines.length*LH+PADY*2+TICKH;
-  const S=2;
   cv.width=W*S; cv.height=H*S;
   const g=cv.getContext("2d"); g.scale(S,S);
   g.fillStyle="#ffffff"; g.fillRect(0,0,W,H);
-  g.font=FS+'px ui-monospace, monospace';
   g.textBaseline="top";
-
-  /* Route + date range, above the ruler. */
-  lines.slice(0,2).forEach(function(l,i){
-    g.fillStyle="#111111";
-    g.fillText(l,PADX,PADY+i*LH);
-  });
-
-  /* One tick per hour: a taller mark every 6 h, mid every 3 h, so the
-     old landmarks still pop out of the denser grid. Every hour gets a
-     rotated label \u2014 sideways, so a 2-digit hour needs no more width
-     than one already-narrow character column. */
-  const gx=h=>PADX+(LAB+h)*chw+chw/2;
-  const rulerTop=PADY+2*LH, tickBase=rulerTop+TICKH-10;
-  g.strokeStyle="#cccccc";
-  for(let h=0;h<24;h++){
-    const len=h%6===0?15:h%3===0?10:5;
-    g.lineWidth=h%6===0?1.5:1;
-    g.beginPath();
-    g.moveTo(gx(h),tickBase-len); g.lineTo(gx(h),tickBase);
-    g.stroke();
-  }
-  g.fillStyle="#555555"; g.font='12px ui-monospace, monospace';
-  g.textAlign="right";
-  for(let h=0;h<24;h++){
-    g.save();
-    g.translate(gx(h),tickBase-18);
-    g.rotate(-Math.PI/2);
-    g.fillText(String(h),0,0);
-    g.restore();
-  }
-  g.textAlign="left";
-  g.font=FS+'px ui-monospace, monospace';
-
-  /* Zone headers, day rows, and the legend, below the ruler. */
-  lines.slice(2).forEach(function(l,i){
-    g.fillStyle=i===0?"#111111":"#333333";
-    g.fillText(l,PADX,PADY+TICKH+(i+2)*LH);
-  });
+  ops.forEach(op=>op.draw(g,op.y));
   return cv;
 }
 
@@ -1413,7 +1423,6 @@ async function saveBlob(blob,name,btn,label){
 }
 
 async function exportIcs(btn){
-  markIcs(); $("#icsNudge").hidden=true;
   const text=buildIcs(), name="circadian-shift.ics";
   btn.textContent="Saving\u2026";
   const done=ok=>{ btn.textContent=ok?"Saved":"Download .ics"; if(!ok) $("#icsBox").hidden=false;
@@ -1437,8 +1446,6 @@ async function exportIcs(btn){
   $("#icsBox").hidden=false;
 }
 $("#icsDl").addEventListener("click",()=>exportIcs($("#icsDl")));
-$("#nudgeGo").addEventListener("click",()=>{ markIcs(); $("#icsNudge").hidden=true; $("#icsCard").scrollIntoView({behavior:"smooth"}); });
-$("#nudgeNo").addEventListener("click",()=>{ markIcs(); $("#icsNudge").hidden=true; });
 $("#imgDl").addEventListener("click",async()=>{
   if(!planImgBlob) await buildPlanImage();
   if(planImgBlob) saveBlob(planImgBlob,"circadian-shift.png",$("#imgDl"),"Download the image");
