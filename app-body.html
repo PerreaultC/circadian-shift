@@ -1,0 +1,1455 @@
+<title>Circadian Shift</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Plain black on white. Monospace for anything with a number in it,
+   the system face for the few sentences of prose. No cards, no shadows,
+   no rounded corners &mdash; hairline rules do the dividing. */
+:root{
+  color-scheme: light;
+  --bg:#ffffff;
+  --text:#111111;
+  --dim:#4a4a4a;
+  --faint:#8a8a8a;
+  --rule:#d8d8d8;
+  --rule-soft:#ececec;
+  --wash:#f6f6f4;
+
+  --c-light:#a8690c;
+  --c-light2:#c2994a;
+  --c-dark:#4a3f8f;
+  --c-sleep:#1f5a80;
+  --c-nap:#6d94b0;
+  --c-mel:#8f3c60;
+  --c-caf:#3c6640;
+  --c-flight:#767676;
+  --c-free:#9a9a9a;
+
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;background:var(--bg);color:var(--text);
+  font-family:var(--mono);font-size:13.5px;line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+#app{display:flex;flex-direction:column;height:100%;max-width:620px;margin:0 auto}
+
+nav{
+  position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);
+  border-bottom:1px solid var(--rule);
+  display:flex;gap:22px;padding:12px 16px 9px;
+}
+nav button{
+  background:none;border:0;padding:0 0 2px;cursor:pointer;color:var(--faint);
+  font-family:var(--mono);font-size:13px;letter-spacing:.02em;
+  border-bottom:2px solid transparent;
+}
+nav button[aria-current="true"]{color:var(--text);border-bottom-color:var(--text);font-weight:600}
+nav button:hover{color:var(--text)}
+
+main{flex:1;overflow-y:auto;overflow-x:hidden;
+  padding:0 16px calc(28px + env(safe-area-inset-bottom,0px))}
+.pane{display:none}
+.pane.on{display:block}
+
+/* sections */
+.card{border-top:1px solid var(--rule);padding:16px 0 18px;margin:0}
+.card:first-child{border-top:0}
+.card > h2{
+  margin:0 0 12px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--faint);font-weight:600;
+}
+.card > .sub,.sub{margin:0 0 12px;font-family:var(--sans);font-size:12.5px;color:var(--dim);line-height:1.5}
+.foot{font-family:var(--sans);font-size:12px;color:var(--faint);line-height:1.5;margin:14px 0 0}
+
+/* form */
+.row{display:flex;gap:14px;flex-wrap:wrap}
+.row > *{flex:1 1 140px;min-width:0}
+label{display:block;font-size:11px;letter-spacing:.06em;color:var(--faint);margin:0 0 4px}
+label em{font-style:normal;opacity:.72}
+input,select{
+  width:100%;background:var(--bg);border:0;border-bottom:1px solid var(--rule);
+  color:var(--text);border-radius:0;padding:5px 2px;
+  font-family:var(--mono);font-size:14px;font-variant-numeric:tabular-nums;
+}
+input:focus,select:focus{outline:0;border-bottom-color:var(--text)}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--text);outline-offset:2px}
+select{font-size:13px}
+input[type=checkbox]{width:auto;accent-color:var(--text)}
+
+.leg{border-left:2px solid var(--rule);padding:2px 0 2px 12px;margin-bottom:14px}
+.leg .lh{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+.leg .lh span{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.tzline{font-size:11.5px;color:var(--faint);margin-top:8px;min-height:15px;line-height:1.5;white-space:pre-line}
+.tzline.bad{color:#a11}
+
+button{
+  font-family:var(--mono);font-size:13px;cursor:pointer;
+  background:var(--bg);color:var(--text);border:1px solid var(--text);
+  border-radius:0;padding:7px 14px;
+}
+button:hover{background:var(--text);color:var(--bg)}
+button.primary{background:var(--text);color:var(--bg)}
+button.primary:hover{opacity:.82}
+button.ghost{border-color:var(--rule);color:var(--dim)}
+button.ghost:hover{background:var(--wash);color:var(--text)}
+button.tiny{padding:2px 7px;font-size:11px}
+.actions{display:flex;gap:10px;margin:18px 0 0;flex-wrap:wrap}
+
+.warn{
+  font-family:var(--sans);font-size:12.5px;color:#a11;
+  border-left:2px solid #a11;padding:6px 0 6px 10px;margin-top:14px;line-height:1.5;
+}
+pre{
+  margin:0 0 14px;padding:12px;background:var(--wash);border:1px solid var(--rule);
+  font-family:var(--mono);font-size:11px;line-height:1.45;color:var(--text);
+  overflow-x:auto;white-space:pre;
+}
+textarea{
+  width:100%;height:150px;background:var(--wash);border:1px solid var(--rule);
+  color:var(--dim);border-radius:0;padding:9px;font-family:var(--mono);font-size:10.5px;
+}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px}
+.legend div{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--dim)}
+.dot{width:9px;height:2px;flex:none;display:inline-block}
+
+/* NOW: one line, not a dashboard */
+.nowline{
+  border-top:1px solid var(--rule);padding:14px 0;
+  display:flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline;font-size:13.5px;
+}
+.nowline .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+.nowline .v{font-weight:600;color:var(--nowc,var(--text))}
+.nowline .w{color:var(--dim);font-variant-numeric:tabular-nums}
+.nowline .n{color:var(--faint);font-variant-numeric:tabular-nums}
+
+/* plan */
+.dayhead{
+  display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+  padding:20px 0 6px;border-bottom:1px solid var(--rule);margin-bottom:2px;
+}
+.dayhead .dl{font-size:13px;font-weight:600}
+.dayhead .dl small{font-weight:400;color:var(--faint);font-size:11.5px;margin-left:8px}
+.dayhead .ds{font-size:11.5px;color:var(--faint);white-space:nowrap;font-variant-numeric:tabular-nums}
+.dayhead.today .dl::before{content:"\203a ";color:var(--text)}
+
+.ev{
+  display:grid;grid-template-columns:82px 2px 1fr;gap:12px;align-items:stretch;
+  padding:7px 0;border-top:1px solid var(--rule-soft);
+}
+.ev:first-of-type{border-top:0}
+.ev .t{font-size:11.5px;color:var(--dim);font-variant-numeric:tabular-nums;padding-top:1px;line-height:1.4}
+.ev .t small{display:block;color:var(--faint);font-size:11px}
+.ev .t u{font-style:normal;text-decoration:none;font-size:9.5px;color:var(--faint)}
+.ev .rail{background:var(--evc,var(--c-free))}
+.ev .b{min-width:0}
+.ev .b .h{font-size:13px;font-weight:600;color:var(--evc,var(--text))}
+.ev .b .d{font-family:var(--sans);font-size:12.5px;color:var(--dim);margin-top:1px;line-height:1.45}
+.ev .b .note{
+  font-family:var(--sans);font-size:11.5px;color:var(--faint);margin-top:4px;
+  padding-left:9px;border-left:1px solid var(--rule);line-height:1.45;
+}
+.ev.past{opacity:.42}
+.ev.cross .t{color:var(--c-flight)}
+.ev.live .b .h::after{content:" \2190 now";font-weight:400;font-size:11px;color:var(--faint)}
+
+.empty{padding:44px 0;color:var(--faint)}
+.empty h2{font-size:14px;color:var(--text);margin:0 0 6px;font-weight:600}
+.empty p{font-family:var(--sans);font-size:12.5px;margin:0;line-height:1.5}
+.demobar{font-family:var(--sans);font-size:12px;color:var(--faint);padding:12px 0 0}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div id="app">
+  <nav>
+    <button data-p="trip" type="button" aria-current="true">trip</button>
+    <button data-p="plan" type="button" aria-current="false">plan</button>
+    <button data-p="export" type="button" aria-current="false">export</button>
+  </nav>
+
+  <main>
+    <!-- ============ NOW ============ -->
+    <!-- ============ PLAN ============ -->
+    <section class="pane" id="pane-plan">
+      <div class="card" id="icsNudge" hidden>
+        <h2>One more step</h2>
+        <p class="sub">This page can't wake you. Your calendar can.</p>
+        <div class="actions">
+          <button class="primary" id="nudgeGo">Export to calendar</button>
+          <button class="ghost" id="nudgeNo">Not now</button>
+        </div>
+      </div>
+      <div class="demobar" id="demo2" hidden>Loaded with the Phoenix&ndash;London trip. Change it, or start your own, under Trip.</div>
+      <div class="nowline" id="nowLine" hidden>
+        <span class="k">now</span>
+        <span class="v" id="nowAction"></span>
+        <span class="w" id="nowWindow"></span>
+        <span class="n" id="nowNext"></span>
+      </div>
+          <div id="planList"></div>
+    </section>
+
+
+    <!-- ============ EXPORT ============ -->
+    <section class="pane" id="pane-export">
+      <div class="empty" id="exportEmpty">
+        <h2>Nothing to export yet</h2>
+        <p>Build a plan first.</p>
+      </div>
+      <div id="exportBody" hidden>
+        <div class="card">
+          <h2>How this is meant to work</h2>
+          <p class="sub" style="margin:0">Make the plan here, follow it from your calendar. Alerts fire offline, including mid&#8209;flight.</p>
+        </div>
+      <div class="card" id="icsCard" hidden>
+        <h2>Calendar export</h2>
+        <p class="sub">Every action as a timed event with an alert.</p>
+        <div class="actions">
+          <button class="primary" id="icsDl">Download .ics</button>
+          <button id="icsShow">Show text</button>
+        </div>
+        <div id="icsBox" hidden>
+          <label for="icsText">Copy into a file named shift.ics</label>
+          <textarea id="icsText" readonly></textarea>
+          <div class="actions"><button id="icsCopy">Copy to clipboard</button></div>
+        </div>
+      </div>
+      <div class="card" id="imgCard" hidden>
+        <h2>The plan on one screen</h2>
+        <pre id="asciiPlan"></pre>
+        <p class="sub">Press and hold the image below to save it to Photos, or copy the text above.</p>
+        <div id="imgWrap"><img id="planImg" alt="Day-by-day chart of the shift plan" style="width:100%;display:block;border:1px solid var(--rule)"></div>
+        <div class="actions">
+          <button class="primary" id="imgDl">Download the image</button>
+          <button id="asciiCopy">Copy the text</button>
+        </div>
+      </div>
+      <div class="card" id="legendCard" hidden>
+        <h2>Legend</h2>
+        <div class="legend">
+          <div><i class="dot" style="background:var(--c-light)"></i>Bright light</div>
+          <div><i class="dot" style="background:var(--c-light2)"></i>Stay in the light</div>
+          <div><i class="dot" style="background:var(--c-dark)"></i>Block light</div>
+          <div><i class="dot" style="background:var(--c-sleep)"></i>Sleep</div>
+          <div><i class="dot" style="background:var(--c-nap)"></i>In-flight nap</div>
+          <div><i class="dot" style="background:var(--c-mel)"></i>Melatonin</div>
+          <div><i class="dot" style="background:var(--c-caf)"></i>Caffeine</div>
+          <div><i class="dot" style="background:var(--c-flight)"></i>Flight</div>
+        </div>
+      </div>
+      </div>
+    </section>
+
+    <!-- ============ TRIP ============ -->
+    <section class="pane" id="pane-trip">
+      <div class="card" id="intro">
+        <h2>Circadian Shift</h2>
+        <p class="sub" style="margin:0">Your flights in, a light and sleep schedule out. Stays in this browser.</p>
+      </div>
+      <div class="card">
+        <h2>Your usual sleep</h2>
+        <div class="row">
+          <div><label for="fBed">Bedtime <em>&mdash; hh:mm pm</em></label><input type="text" id="fBed" value="10:00 pm" autocomplete="off"></div>
+          <div><label for="fWake">Wake <em>&mdash; hh:mm am</em></label><input type="text" id="fWake" value="6:00 am" autocomplete="off"></div>
+        </div>
+        <div style="margin-top:12px">
+          <label for="fHomeTz">Home time zone</label>
+          <select id="fHomeTz"></select>
+        </div>
+        <div style="margin-top:12px">
+          <label for="fFloor">Earliest you'll wake at home <em>&mdash; hh:mm am</em></label>
+          <input type="text" id="fFloor" value="4:00 am" autocomplete="off">
+          <p class="sub" id="floorEffect" style="margin:8px 0 0"></p>
+        </div>
+        <p class="sub" style="margin:14px 0 0">Starts 4 days before departure. Melatonin 1&ndash;3&nbsp;mg and caffeine cut-offs are included.</p>
+      </div>
+
+      <div class="card">
+        <h2>Flights</h2>
+        <p class="sub">Three-letter airport codes. Times exactly as printed on your ticket, including the arrival date if you land the next day. The plan assumes you are out of bed 4&nbsp;hours before take-off.</p>
+        <div id="legs"></div>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button id="addLeg" class="ghost">+ Add connecting flight</button>
+          <button id="loadDemo" class="ghost">Load an example</button>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="primary" id="build">Build plan</button>
+        <button class="ghost" id="reset">Reset</button>
+      </div>
+      <div class="warn" id="buildMsg" hidden></div>
+
+      <p class="foot" id="installNote">iPhone: open in <b>Safari</b>, Share &rarr; Add to Home Screen to use it offline.</p>
+      <p class="foot">A scheduling tool, not medical advice. Check melatonin use with a physician.</p>
+    </section>
+  </main>
+
+</div>
+
+<script>
+"use strict";
+const MIN=60000, HOUR=3600000, DAY=86400000;
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+
+/* ============================================================
+   1. AIRPORTS  code -> [IANA zone, city]
+   Unknown codes fall back to the browser's full IANA list.
+   ============================================================ */
+const AP={
+PHX:["America/Phoenix","Phoenix"],TUS:["America/Phoenix","Tucson"],LAX:["America/Los_Angeles","Los Angeles"],
+SFO:["America/Los_Angeles","San Francisco"],SAN:["America/Los_Angeles","San Diego"],SEA:["America/Los_Angeles","Seattle"],
+PDX:["America/Los_Angeles","Portland"],LAS:["America/Los_Angeles","Las Vegas"],SJC:["America/Los_Angeles","San Jose"],
+DEN:["America/Denver","Denver"],SLC:["America/Denver","Salt Lake City"],ABQ:["America/Denver","Albuquerque"],
+DFW:["America/Chicago","Dallas"],IAH:["America/Chicago","Houston"],HOU:["America/Chicago","Houston"],
+AUS:["America/Chicago","Austin"],SAT:["America/Chicago","San Antonio"],ORD:["America/Chicago","Chicago"],
+MDW:["America/Chicago","Chicago"],MSP:["America/Chicago","Minneapolis"],MCI:["America/Chicago","Kansas City"],
+STL:["America/Chicago","St Louis"],MEM:["America/Chicago","Memphis"],BNA:["America/Chicago","Nashville"],
+MSY:["America/Chicago","New Orleans"],ATL:["America/New_York","Atlanta"],JFK:["America/New_York","New York"],
+EWR:["America/New_York","Newark"],LGA:["America/New_York","New York"],BOS:["America/New_York","Boston"],
+IAD:["America/New_York","Washington"],DCA:["America/New_York","Washington"],BWI:["America/New_York","Baltimore"],
+PHL:["America/New_York","Philadelphia"],CLT:["America/New_York","Charlotte"],MIA:["America/New_York","Miami"],
+MCO:["America/New_York","Orlando"],FLL:["America/New_York","Fort Lauderdale"],TPA:["America/New_York","Tampa"],
+DTW:["America/New_York","Detroit"],CLE:["America/New_York","Cleveland"],PIT:["America/New_York","Pittsburgh"],
+RDU:["America/New_York","Raleigh"],CVG:["America/New_York","Cincinnati"],IND:["America/New_York","Indianapolis"],
+YYZ:["America/Toronto","Toronto"],YUL:["America/Toronto","Montreal"],YOW:["America/Toronto","Ottawa"],
+YVR:["America/Vancouver","Vancouver"],YYC:["America/Edmonton","Calgary"],YEG:["America/Edmonton","Edmonton"],
+YWG:["America/Winnipeg","Winnipeg"],YHZ:["America/Halifax","Halifax"],ANC:["America/Anchorage","Anchorage"],
+HNL:["Pacific/Honolulu","Honolulu"],OGG:["Pacific/Honolulu","Maui"],KOA:["Pacific/Honolulu","Kona"],
+MEX:["America/Mexico_City","Mexico City"],CUN:["America/Cancun","Cancun"],GDL:["America/Mexico_City","Guadalajara"],
+MTY:["America/Monterrey","Monterrey"],PVR:["America/Mazatlan","Puerto Vallarta"],SJD:["America/Mazatlan","Los Cabos"],
+GRU:["America/Sao_Paulo","Sao Paulo"],GIG:["America/Sao_Paulo","Rio de Janeiro"],BSB:["America/Sao_Paulo","Brasilia"],
+EZE:["America/Argentina/Buenos_Aires","Buenos Aires"],SCL:["America/Santiago","Santiago"],LIM:["America/Lima","Lima"],
+BOG:["America/Bogota","Bogota"],MDE:["America/Bogota","Medellin"],UIO:["America/Guayaquil","Quito"],
+GYE:["America/Guayaquil","Guayaquil"],LPB:["America/La_Paz","La Paz"],MVD:["America/Montevideo","Montevideo"],
+ASU:["America/Asuncion","Asuncion"],CCS:["America/Caracas","Caracas"],PTY:["America/Panama","Panama City"],
+SJO:["America/Costa_Rica","San Jose"],GUA:["America/Guatemala","Guatemala City"],HAV:["America/Havana","Havana"],
+SJU:["America/Puerto_Rico","San Juan"],NAS:["America/Nassau","Nassau"],MBJ:["America/Jamaica","Montego Bay"],
+PUJ:["America/Santo_Domingo","Punta Cana"],KEF:["Atlantic/Reykjavik","Reykjavik"],
+LHR:["Europe/London","London"],LGW:["Europe/London","London"],LCY:["Europe/London","London"],
+STN:["Europe/London","London"],LTN:["Europe/London","London"],MAN:["Europe/London","Manchester"],
+EDI:["Europe/London","Edinburgh"],GLA:["Europe/London","Glasgow"],BHX:["Europe/London","Birmingham"],
+DUB:["Europe/Dublin","Dublin"],SNN:["Europe/Dublin","Shannon"],LIS:["Europe/Lisbon","Lisbon"],
+OPO:["Europe/Lisbon","Porto"],FNC:["Atlantic/Madeira","Funchal"],MAD:["Europe/Madrid","Madrid"],
+BCN:["Europe/Madrid","Barcelona"],AGP:["Europe/Madrid","Malaga"],PMI:["Europe/Madrid","Palma"],
+VLC:["Europe/Madrid","Valencia"],SVQ:["Europe/Madrid","Seville"],LPA:["Atlantic/Canary","Las Palmas"],
+TFS:["Atlantic/Canary","Tenerife"],CDG:["Europe/Paris","Paris"],ORY:["Europe/Paris","Paris"],
+NCE:["Europe/Paris","Nice"],LYS:["Europe/Paris","Lyon"],TLS:["Europe/Paris","Toulouse"],
+MRS:["Europe/Paris","Marseille"],BOD:["Europe/Paris","Bordeaux"],NTE:["Europe/Paris","Nantes"],
+BRU:["Europe/Brussels","Brussels"],AMS:["Europe/Amsterdam","Amsterdam"],EIN:["Europe/Amsterdam","Eindhoven"],
+LUX:["Europe/Luxembourg","Luxembourg"],FRA:["Europe/Berlin","Frankfurt"],MUC:["Europe/Berlin","Munich"],
+BER:["Europe/Berlin","Berlin"],DUS:["Europe/Berlin","Dusseldorf"],HAM:["Europe/Berlin","Hamburg"],
+STR:["Europe/Berlin","Stuttgart"],CGN:["Europe/Berlin","Cologne"],ZRH:["Europe/Zurich","Zurich"],
+GVA:["Europe/Zurich","Geneva"],BSL:["Europe/Zurich","Basel"],VIE:["Europe/Vienna","Vienna"],
+SZG:["Europe/Vienna","Salzburg"],PRG:["Europe/Prague","Prague"],BUD:["Europe/Budapest","Budapest"],
+BTS:["Europe/Bratislava","Bratislava"],WAW:["Europe/Warsaw","Warsaw"],KRK:["Europe/Warsaw","Krakow"],
+GDN:["Europe/Warsaw","Gdansk"],CPH:["Europe/Copenhagen","Copenhagen"],ARN:["Europe/Stockholm","Stockholm"],
+GOT:["Europe/Stockholm","Gothenburg"],OSL:["Europe/Oslo","Oslo"],BGO:["Europe/Oslo","Bergen"],
+HEL:["Europe/Helsinki","Helsinki"],TLL:["Europe/Tallinn","Tallinn"],RIX:["Europe/Riga","Riga"],
+VNO:["Europe/Vilnius","Vilnius"],FCO:["Europe/Rome","Rome"],MXP:["Europe/Rome","Milan"],
+LIN:["Europe/Rome","Milan"],BGY:["Europe/Rome","Bergamo"],VCE:["Europe/Rome","Venice"],
+NAP:["Europe/Rome","Naples"],BLQ:["Europe/Rome","Bologna"],FLR:["Europe/Rome","Florence"],
+CTA:["Europe/Rome","Catania"],ATH:["Europe/Athens","Athens"],SKG:["Europe/Athens","Thessaloniki"],
+HER:["Europe/Athens","Heraklion"],OTP:["Europe/Bucharest","Bucharest"],SOF:["Europe/Sofia","Sofia"],
+ZAG:["Europe/Zagreb","Zagreb"],BEG:["Europe/Belgrade","Belgrade"],LJU:["Europe/Ljubljana","Ljubljana"],
+MLA:["Europe/Malta","Malta"],IST:["Europe/Istanbul","Istanbul"],SAW:["Europe/Istanbul","Istanbul"],
+AYT:["Europe/Istanbul","Antalya"],SVO:["Europe/Moscow","Moscow"],DME:["Europe/Moscow","Moscow"],
+VKO:["Europe/Moscow","Moscow"],LED:["Europe/Moscow","St Petersburg"],KBP:["Europe/Kyiv","Kyiv"],
+TBS:["Asia/Tbilisi","Tbilisi"],EVN:["Asia/Yerevan","Yerevan"],GYD:["Asia/Baku","Baku"],
+TLV:["Asia/Jerusalem","Tel Aviv"],AMM:["Asia/Amman","Amman"],BEY:["Asia/Beirut","Beirut"],
+CAI:["Africa/Cairo","Cairo"],HRG:["Africa/Cairo","Hurghada"],RUH:["Asia/Riyadh","Riyadh"],
+JED:["Asia/Riyadh","Jeddah"],DMM:["Asia/Riyadh","Dammam"],DXB:["Asia/Dubai","Dubai"],
+AUH:["Asia/Dubai","Abu Dhabi"],SHJ:["Asia/Dubai","Sharjah"],DOH:["Asia/Qatar","Doha"],
+KWI:["Asia/Kuwait","Kuwait City"],BAH:["Asia/Bahrain","Manama"],MCT:["Asia/Muscat","Muscat"],
+IKA:["Asia/Tehran","Tehran"],BGW:["Asia/Baghdad","Baghdad"],CMN:["Africa/Casablanca","Casablanca"],
+RAK:["Africa/Casablanca","Marrakesh"],TUN:["Africa/Tunis","Tunis"],ALG:["Africa/Algiers","Algiers"],
+DKR:["Africa/Dakar","Dakar"],ABJ:["Africa/Abidjan","Abidjan"],ACC:["Africa/Accra","Accra"],
+LOS:["Africa/Lagos","Lagos"],ABV:["Africa/Lagos","Abuja"],ADD:["Africa/Addis_Ababa","Addis Ababa"],
+NBO:["Africa/Nairobi","Nairobi"],EBB:["Africa/Kampala","Entebbe"],KGL:["Africa/Kigali","Kigali"],
+DAR:["Africa/Dar_es_Salaam","Dar es Salaam"],JRO:["Africa/Dar_es_Salaam","Kilimanjaro"],
+ZNZ:["Africa/Dar_es_Salaam","Zanzibar"],JNB:["Africa/Johannesburg","Johannesburg"],
+CPT:["Africa/Johannesburg","Cape Town"],DUR:["Africa/Johannesburg","Durban"],WDH:["Africa/Windhoek","Windhoek"],
+MRU:["Indian/Mauritius","Mauritius"],SEZ:["Indian/Mahe","Seychelles"],TNR:["Indian/Antananarivo","Antananarivo"],
+KHI:["Asia/Karachi","Karachi"],ISB:["Asia/Karachi","Islamabad"],LHE:["Asia/Karachi","Lahore"],
+DEL:["Asia/Kolkata","Delhi"],BOM:["Asia/Kolkata","Mumbai"],BLR:["Asia/Kolkata","Bengaluru"],
+MAA:["Asia/Kolkata","Chennai"],HYD:["Asia/Kolkata","Hyderabad"],CCU:["Asia/Kolkata","Kolkata"],
+COK:["Asia/Kolkata","Kochi"],GOI:["Asia/Kolkata","Goa"],AMD:["Asia/Kolkata","Ahmedabad"],
+CMB:["Asia/Colombo","Colombo"],MLE:["Indian/Maldives","Male"],KTM:["Asia/Kathmandu","Kathmandu"],
+DAC:["Asia/Dhaka","Dhaka"],BKK:["Asia/Bangkok","Bangkok"],DMK:["Asia/Bangkok","Bangkok"],
+HKT:["Asia/Bangkok","Phuket"],CNX:["Asia/Bangkok","Chiang Mai"],HAN:["Asia/Ho_Chi_Minh","Hanoi"],
+SGN:["Asia/Ho_Chi_Minh","Ho Chi Minh City"],DAD:["Asia/Ho_Chi_Minh","Da Nang"],
+PNH:["Asia/Phnom_Penh","Phnom Penh"],REP:["Asia/Phnom_Penh","Siem Reap"],VTE:["Asia/Vientiane","Vientiane"],
+RGN:["Asia/Yangon","Yangon"],SIN:["Asia/Singapore","Singapore"],KUL:["Asia/Kuala_Lumpur","Kuala Lumpur"],
+PEN:["Asia/Kuala_Lumpur","Penang"],BKI:["Asia/Kuala_Lumpur","Kota Kinabalu"],BWN:["Asia/Brunei","Bandar Seri Begawan"],
+CGK:["Asia/Jakarta","Jakarta"],DPS:["Asia/Makassar","Bali"],SUB:["Asia/Jakarta","Surabaya"],
+MNL:["Asia/Manila","Manila"],CEB:["Asia/Manila","Cebu"],HKG:["Asia/Hong_Kong","Hong Kong"],
+MFM:["Asia/Macau","Macau"],TPE:["Asia/Taipei","Taipei"],KHH:["Asia/Taipei","Kaohsiung"],
+PEK:["Asia/Shanghai","Beijing"],PKX:["Asia/Shanghai","Beijing"],PVG:["Asia/Shanghai","Shanghai"],
+SHA:["Asia/Shanghai","Shanghai"],CAN:["Asia/Shanghai","Guangzhou"],SZX:["Asia/Shanghai","Shenzhen"],
+CTU:["Asia/Shanghai","Chengdu"],TFU:["Asia/Shanghai","Chengdu"],XIY:["Asia/Shanghai","Xi'an"],
+KMG:["Asia/Shanghai","Kunming"],HGH:["Asia/Shanghai","Hangzhou"],XMN:["Asia/Shanghai","Xiamen"],
+ICN:["Asia/Seoul","Seoul"],GMP:["Asia/Seoul","Seoul"],PUS:["Asia/Seoul","Busan"],
+CJU:["Asia/Seoul","Jeju"],NRT:["Asia/Tokyo","Tokyo"],HND:["Asia/Tokyo","Tokyo"],
+KIX:["Asia/Tokyo","Osaka"],ITM:["Asia/Tokyo","Osaka"],NGO:["Asia/Tokyo","Nagoya"],
+CTS:["Asia/Tokyo","Sapporo"],FUK:["Asia/Tokyo","Fukuoka"],OKA:["Asia/Tokyo","Okinawa"],
+ULN:["Asia/Ulaanbaatar","Ulaanbaatar"],TAS:["Asia/Tashkent","Tashkent"],ALA:["Asia/Almaty","Almaty"],
+NQZ:["Asia/Almaty","Astana"],SYD:["Australia/Sydney","Sydney"],MEL:["Australia/Melbourne","Melbourne"],
+BNE:["Australia/Brisbane","Brisbane"],OOL:["Australia/Brisbane","Gold Coast"],PER:["Australia/Perth","Perth"],
+ADL:["Australia/Adelaide","Adelaide"],CNS:["Australia/Brisbane","Cairns"],DRW:["Australia/Darwin","Darwin"],
+HBA:["Australia/Hobart","Hobart"],CBR:["Australia/Sydney","Canberra"],AKL:["Pacific/Auckland","Auckland"],
+CHC:["Pacific/Auckland","Christchurch"],WLG:["Pacific/Auckland","Wellington"],ZQN:["Pacific/Auckland","Queenstown"],
+NAN:["Pacific/Fiji","Nadi"],PPT:["Pacific/Tahiti","Papeete"],GUM:["Pacific/Guam","Guam"],
+NOU:["Pacific/Noumea","Noumea"],APW:["Pacific/Apia","Apia"]
+};
+
+/* ============================================================
+   2. TIME ZONE MATH \u2014 Intl carries the whole IANA database
+   ============================================================ */
+function tzOffset(tz,ts){
+  const p=new Intl.DateTimeFormat("en-US",{timeZone:tz,hour12:false,year:"numeric",month:"2-digit",
+    day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit"}).formatToParts(new Date(ts));
+  const m={}; for(const x of p) m[x.type]=x.value;
+  let h=+m.hour; if(h===24) h=0;
+  return Math.round((Date.UTC(+m.year,+m.month-1,+m.day,h,+m.minute,+m.second)-ts)/MIN);
+}
+function localParts(tz,ts){
+  const p=new Intl.DateTimeFormat("en-US",{timeZone:tz,hour12:false,year:"numeric",month:"2-digit",
+    day:"2-digit",hour:"2-digit",minute:"2-digit"}).formatToParts(new Date(ts));
+  const m={}; for(const x of p) m[x.type]=x.value;
+  let h=+m.hour; if(h===24) h=0;
+  return {y:+m.year,mo:+m.month,d:+m.day,h,mi:+m.minute};
+}
+function zonedToTs(tz,y,mo,d,h,mi){          // wall time in tz -> epoch ms
+  const guess=Date.UTC(y,mo-1,d,h,mi);
+  let ts=guess-tzOffset(tz,guess)*MIN;
+  ts=guess-tzOffset(tz,ts)*MIN;              // second pass settles DST edges
+  return ts;
+}
+const fmtTime=(tz,ts)=>new Intl.DateTimeFormat("en-GB",{timeZone:tz,hour:"2-digit",minute:"2-digit",hour12:false}).format(new Date(ts));
+const fmtDate=(tz,ts)=>new Intl.DateTimeFormat("en-GB",{timeZone:tz,weekday:"short",day:"numeric",month:"short"}).format(new Date(ts));
+const fmtDay =(tz,ts)=>new Intl.DateTimeFormat("en-GB",{timeZone:tz,weekday:"long",day:"numeric",month:"long"}).format(new Date(ts));
+const fmtWhen=(tz,ts)=>new Intl.DateTimeFormat("en-GB",{timeZone:tz,weekday:"short",day:"numeric",
+  month:"short",hour:"numeric",minute:"2-digit",hour12:true}).format(new Date(ts));
+const dayKey =(tz,ts)=>{const p=localParts(tz,ts);return p.y+"-"+p.mo+"-"+p.d;};
+const calDay =(tz,ts)=>{const p=localParts(tz,ts);return Math.floor(Date.UTC(p.y,p.mo-1,p.d)/DAY);};
+function tzAbbr(tz,ts){
+  try{
+    const p=new Intl.DateTimeFormat("en-US",{timeZone:tz,timeZoneName:"short"}).formatToParts(new Date(ts));
+    return (p.find(x=>x.type==="timeZoneName")||{}).value||"";
+  }catch(e){return "";}
+}
+const shortPlace=tz=>tz.split("/").pop().replace(/_/g," ");
+function hm(ms){
+  const t=Math.max(0,Math.round(ms/MIN)), h=Math.floor(t/60), m=t%60;
+  return h?h+"h "+String(m).padStart(2,"0")+"m":m+"m";
+}
+const signed=h=>(h>0?"+":"")+(Math.round(h*10)/10);
+const r1=n=>Math.round(n*10)/10;
+
+/* ============================================================
+   3. THE ENGINE
+   ------------------------------------------------------------
+   Light phase response curve, anchored on CBTmin:
+     light AFTER  CBTmin -> phase advance (clock earlier)  -> eastbound
+     light BEFORE CBTmin -> phase delay   (clock later)    -> westbound
+   Melatonin's PRC runs roughly 12 h out of phase with light's, so
+   evening melatonin advances and reinforces the morning light.
+   Sleep is placed so waking lands at CBTmin + 2 h, which puts every
+   waking hour of morning light on the advancing side of the curve.
+   ============================================================ */
+const RATES={standard:{adv:1.0,del:2.0},aggressive:{adv:1.5,del:2.5}};
+
+function buildPlan(c){
+  const [bh,bm]=c.bed.split(":").map(Number), [wh,wm]=c.wake.split(":").map(Number);
+  const sleepMin=((wh*60+wm)-(bh*60+bm)+1440)%1440 || 480;
+
+  const legs=c.legs.map(l=>({
+    ...l,
+    depTs:zonedToTs(l.fromTz,...l.dep.split(/[-T:]/).map(Number)),
+    arrTs:zonedToTs(l.toTz,...l.arr.split(/[-T:]/).map(Number))
+  })).sort((a,b)=>a.depTs-b.depTs);
+
+  const departTs=legs[0].depTs, arriveTs=legs[legs.length-1].arrTs;
+  const homeTz=c.homeTz, destTz=legs[legs.length-1].toTz;
+
+  /* --- how far, and which way round --- */
+  const mapDiff=(tzOffset(destTz,arriveTs)-tzOffset(homeTz,departTs))/60;
+  let raw=mapDiff;
+  while(raw>12) raw-=24; while(raw<=-12) raw+=24;
+  const wrapped=Math.abs(mapDiff-raw)>0.01;
+  const R=RATES[c.pace];
+  const direct = raw>=0 ? {dir:"advance",amt:raw} : {dir:"delay",amt:-raw};
+  const round  = raw>=0 ? {dir:"delay",amt:24-raw} : {dir:"advance",amt:24+raw};
+  const cost=o=>o.amt/(o.dir==="advance"?R.adv:R.del);
+  let pick=direct, longWay=false;
+  if(c.longWay && raw!==0 && cost(round)<cost(direct)-0.5){ pick=round; longWay=true; }
+  const dir=pick.dir, total=pick.amt, rate=dir==="advance"?R.adv:R.del, sgn=dir==="advance"?-1:1;
+
+  /* --- Livability ceiling. How far the schedule may move while you are
+     still at home living a normal life. Without this the arithmetic
+     happily asks you to wake at 01:00 on a Tuesday. The rest of the
+     shift is bought back on the flight and in the days after landing. --- */
+  const wakeMin=wh*60+wm, bedMin=bh*60+bm;
+  let maxPre=total;
+  if(c.floor&&c.floor!=="none"){
+    const [fh,fm]=c.floor.split(":").map(Number), fMin=fh*60+fm;
+    const room=(wakeMin-fMin+1440)%1440;  // hours of disruption you will accept
+    maxPre=Math.min(total, Math.max(0, room/60));
+  }
+  /* Spread whatever shift is available across every prep night rather than
+     front-loading it: smaller nightly steps are easier to actually sleep
+     through, and the total is capped by livability, not by the calendar. */
+  maxPre=Math.min(maxPre,c.prep*rate);      // four nights cannot do more than four steps
+  const preDays=maxPre>0.05?c.prep:0;
+  const preStep=preDays?maxPre/preDays:0;
+
+  /* Cycle i's UNSHIFTED clock low point. Cycle 0 is the first shifted
+     night; cycle -1 contributes the daytime that leads into it. */
+  const anchor=departTs-preDays*DAY;
+  const ap=localParts(homeTz,anchor);
+  let U0=zonedToTs(homeTz,ap.y,ap.mo,ap.d,wh,wm)-2*HOUR;
+  if(U0<anchor){
+    const q=localParts(homeTz,U0+DAY+6*HOUR);
+    U0=zonedToTs(homeTz,q.y,q.mo,q.d,wh,wm)-2*HOUR;
+  }
+  const U=i=>U0+i*DAY;
+  const planStart=U(-1)+2*HOUR;           // the first morning you act on
+
+  /* --- The flight is the single biggest shift on offer: a long dark
+     block you will spend sitting still anyway. Sleep it end to end,
+     waking two hours before the wheels come down. --- */
+  const bigLeg=legs.filter(l=>l.arrTs-l.depTs>=5*HOUR)
+                   .sort((a,b)=>(b.arrTs-b.depTs)-(a.arrTs-a.depTs))[0];
+  let flightIdx=-1, flightBed=0, flightWake=0, flightShift=0;
+  if(bigLeg){
+    const wEnd=bigLeg.arrTs-2*HOUR;
+    const wStart=Math.max(bigLeg.depTs+20*MIN,wEnd-sleepMin*MIN);
+    if(wEnd-wStart>=4*HOUR){
+      const cbt=wEnd-2*HOUR;
+      const landHour=localParts(destTz,wEnd).h+localParts(destTz,wEnd).mi/60;
+      if(landHour>=3&&landHour<12) for(let i=0;i<40;i++){
+        const s=(U(i)-cbt)/HOUR*(dir==="advance"?1:-1);
+        if(s>=-0.01&&s<=12.01){
+          flightIdx=i; flightShift=Math.min(s,total); flightBed=wStart; flightWake=wEnd;
+          break;
+        }
+      }
+    }
+  }
+
+  /* Westbound landing night: aim straight at the destination's own bedtime. */
+  let landBed=0;
+  if(dir==="delay"){
+    const a=localParts(destTz,arriveTs);
+    landBed=zonedToTs(destTz,a.y,a.mo,a.d,bh,bm);
+    if(landBed<arriveTs+HOUR) landBed+=DAY;
+  }
+
+  const post=Math.ceil(Math.max(0,total-Math.max(flightShift,maxPre))/rate);
+  const N=Math.min(20,Math.max(preDays+post+1,
+                               Math.ceil((arriveTs+2*DAY-U0)/DAY),
+                               flightIdx+post+1));
+
+  /* --- lay out the cycles before writing any events, so each day knows
+     the bedtime it is heading towards --- */
+  const cyc=[]; let prev=0, landed=false;
+  for(let i=-1;i<=N;i++){
+    let shift,bed,wake,cbt,onPlane=false;
+    if(i===flightIdx){
+      shift=Math.max(prev,Math.min(flightShift,total));
+      bed=flightBed; wake=flightWake; cbt=wake-2*HOUR; onPlane=true;
+    }else{
+      if(i<0) shift=0;
+      else if(U(i)<departTs) shift=Math.min((i+1)*preStep,maxPre,total);
+      else if(dir==="delay"&&landBed&&!landed){
+        shift=(landBed+sleepMin*MIN-2*HOUR-U(i))/HOUR;
+        landed=true;
+      }
+      else shift=Math.min(prev+rate,total);
+      shift=Math.max(Math.min(shift,total),prev);
+      cbt=U(i)+sgn*shift*HOUR;
+      wake=cbt+2*HOUR; bed=wake-sleepMin*MIN;
+    }
+    if(i>=0) prev=shift;
+    cyc.push({i,shift,bed,wake,cbt,onPlane});
+  }
+
+  /* Switch the whole timeline to destination time at the moment you wake on
+     the plane \u2014 not at touchdown, which would split the waking day in two. */
+  const switchTs=flightIdx>=0?flightWake:arriveTs;
+  /* On an early departure you are up when the airport says, not when the plan
+     says. Move that night's sleep forward to protect it \u2014 but do NOT claim the
+     extra hours as shift: being awake early only advances the clock if the
+     light lands after your low point, which it does not at 02:00. */
+  const forcedWake=departTs-(c.lead||4)*HOUR;
+  for(const C of cyc){
+    if(C.i<0||C.onPlane||C.bed>=departTs||C.wake<=forcedWake) continue;
+    /* Going to bed early to protect the night only makes sense when you are
+       advancing. Flying west it would undo the delay you just built, so the
+       night is simply shorter and you make it up with a nap on board. */
+    const earliestBed=dir==="advance"?C.bed-2*HOUR:C.bed;
+    if(forcedWake-earliestBed>=2*HOUR){
+      C.bed=Math.max(earliestBed,forcedWake-sleepMin*MIN);
+      C.wake=forcedWake; C.forced=true;
+    }else{
+      C.skip=true;   // the whole night sits inside the airport run; there isn't one
+    }
+  }
+
+  const zoneAt=ts=>ts<switchTs?homeTz:destTz;
+  const overlapsFlight=(a,b)=>legs.some(l=>a<l.arrTs&&b>l.depTs);
+
+  const ev=[];
+  const add=o=>{ if(o.end>planStart-MIN&&o.end>o.start-1) ev.push(o); };
+
+  /* Once the clock has arrived, the instructions stop. One consolidation
+     night to hold the schedule, then the plan is over \u2014 a page that keeps
+     prescribing light at a clock that is already right is just noise. */
+  let settledRun=0;
+  for(let n=0;n<cyc.length;n++){
+    const C=cyc[n], nx=cyc[n+1];
+    const i=C.i, shift=C.shift, cbt=C.cbt, wake=C.wake, bed=C.bed;
+    const settled=shift>=total-0.01;
+    if(settled&&i>=0) settledRun++; else settledRun=0;
+    const quiet=settledRun>=2;
+    const nextBed=nx?nx.bed:wake+16*HOUR;
+    const darkLead=dir==="advance"?2*HOUR:1.5*HOUR;
+
+    if(i>=0&&C.skip){
+      add({k:"done",start:departTs-(c.lead||DEF_LEAD)*HOUR,end:departTs-(c.lead||DEF_LEAD)*HOUR+15*MIN,
+        cbt,shift,i,point:true,
+        h:"No night before this one",
+        d:"The flight leaves too early to sleep first. Bank sleep the night before and take it on board instead.",note:null});
+    }
+    if(i>=0&&!C.skip){
+      add({k:"sleep",start:bed,end:wake,cbt,shift,i,forced:!!C.forced,
+        h:"Sleep",
+        d:C.onPlane
+          ? "Sleep the flight. Worth "+r1(shift-(cyc[n-1]?cyc[n-1].shift:0))+" h of shift."
+          : r1((wake-bed)/HOUR)+" h in the dark."+(C.forced?" Early start for the flight.":""),
+        note: C.onPlane||overlapsFlight(bed,wake)
+          ? "Eye mask, earplugs, skip the meal service." : null});
+
+      if(!quiet&&!C.skip) add({k:"dark",start:bed-darkLead,end:bed,cbt,shift,i,hyg:dir!=="advance",
+        h:dir==="advance"?"Block light":"Wind down",
+        d:dir==="advance"?"Blue-blockers on, lights down.":"Lights down, screens off.",
+        note: overlapsFlight(bed-darkLead,bed)?"On board: sunglasses, shade down.":null});
+    }
+
+    /* Daytime. Bright core first, then a long tail that still counts \u2014
+       the advancing arm of the light curve runs several hours past the
+       low point, with the effect tapering rather than stopping. */
+    if(quiet){ /* nothing further to prescribe */ }
+    else if(dir==="advance"){
+      const lightFrom=(C.forced&&cbt>wake+15*MIN)?cbt:wake;
+      if(lightFrom>wake) add({k:"dark",start:wake,end:cbt,cbt,shift,i,
+        h:"Keep the lights low",
+        d:"Up before your clock's low point. Light now would push it the wrong way \u2014 wait until "+fmtTime(zoneAt(cbt),cbt)+".",
+        note:"Airport and cabin lighting too. Sunglasses if you have to."});
+      add({k:"light",start:lightFrom,end:lightFrom+3*HOUR,cbt,shift,i,
+        h:"Bright light",
+        d:"Get outside. Indoors, a 10,000 lux box.",
+        note: overlapsFlight(lightFrom,lightFrom+3*HOUR)?"On board: shade up, screen bright.":null});
+      const t2a=lightFrom+3*HOUR, t2b=Math.min(lightFrom+10*HOUR,nextBed-2*HOUR);
+      if(t2b>t2a+30*MIN) add({k:"light2",start:t2a,end:t2b,cbt,shift,i,
+        h:"Stay in the light",
+        d:"Keep the day bright.",note:null});
+    }else{
+      const nCbt=nx?nx.cbt:cbt+DAY;
+      const t2a=nextBed-9.5*HOUR, t2b=nextBed-5.5*HOUR;
+      if(t2b>t2a+30*MIN) add({k:"light2",start:t2a,end:t2b,cbt:nCbt,shift,i,
+        h:"Stay in the light",
+        d:"Keep the afternoon bright.",note:null});
+      add({k:"light",start:nextBed-5.5*HOUR,end:nextBed-1.5*HOUR,cbt:nCbt,shift,i,
+        h:"Bright light",
+        d:"Bright light, stopping 90 min before bed.",
+        note: overlapsFlight(nextBed-5.5*HOUR,nextBed-1.5*HOUR)?"On board: shade up, screens bright.":null});
+      const darkFrom=(C.forced&&cbt>wake)?cbt:wake;
+      if(i>=0) add({k:"dark",start:darkFrom,end:darkFrom+3*HOUR,cbt,shift,i,
+        h:"Block light",
+        d:"Sunglasses on outdoors."+(darkFrom>wake?" Before "+fmtTime(zoneAt(cbt),cbt)+", light is fine \u2014 it helps.":""),
+        note: overlapsFlight(darkFrom,darkFrom+3*HOUR)?"On board: sunglasses, shade down.":null});
+    }
+
+    if(c.mel>0&&dir==="advance"&&i>=0&&!settled&&!quiet){
+      const off=c.melT==="max"?5.5:2, t=bed-off*HOUR;
+      add({k:"mel",start:t,end:t+15*MIN,cbt,shift,i,point:true,
+        h:"Melatonin 1\u20133 mg",
+        d:off+" h before tonight's bedtime.",
+        note: off===5.5?"Can make the afternoon heavy.":null});
+    }
+    if(c.mel>0&&dir==="delay"&&i===0){
+      add({k:"mel",start:wake,end:wake+15*MIN,cbt,shift,i,point:true,
+        h:"Melatonin: skip it",
+        d:"Not used flying west.",note:null});
+    }
+
+    /* Caffeine. Calibrated tighter than the usual 8-hours-before-bed rule:
+       roughly the first four waking hours only, which is what Timeshifter
+       prescribes \u2014 caffeine blunts the shift as well as the sleep. */
+    if(c.caf&&!quiet){
+      const start=wake+1*HOUR;
+      const cut=Math.min(wake+5*HOUR,nextBed-8*HOUR);
+      if(cut>start+30*MIN) add({k:"caf",start,end:cut,cbt,shift,i,cut,
+        h:"Caffeine window",
+        d:"Last coffee by {{T}}.",note:null});
+    }
+
+    if(settled&&i>=0&&(!cyc[n-1]||cyc[n-1].shift<total-0.01)){
+      add({k:"done",start:wake+30*MIN,end:wake+HOUR,cbt,shift,i,point:true,
+        h:"Fully shifted",
+        d:"On local time. Hold this schedule.",note:null});
+    }
+    if(quiet) break;
+  }
+
+  if(flightIdx<0&&bigLeg&&bigLeg.arrTs-bigLeg.depTs>=8*HOUR){
+    const dur=bigLeg.arrTs-bigLeg.depTs;
+    const nStart=bigLeg.depTs+0.42*dur;
+    const nEnd=Math.min(nStart+2.5*HOUR,bigLeg.arrTs-3*HOUR);
+    if(nEnd>nStart+HOUR) ev.push({k:"nap",start:nStart,end:nEnd,point:false,
+      h:"Nap, then stay awake",
+      d:"One nap, over your body's night. Set an alarm.",
+      note:"Awake after this \u2014 shade up, walk the aisle."});
+  }
+
+  for(const l of legs){
+    ev.push({k:"flight",start:l.depTs,end:l.arrTs,
+      h:l.from+" \u2192 "+l.to,
+      d:hm(l.arrTs-l.depTs)+". Switch your watch to "+shortPlace(l.toTz)+" time now."+
+        (dir==="delay"&&flightIdx<0?" Stay awake \u2014 you land in the evening.":""),
+      note:null,leg:l});
+  }
+  ev.sort((a,b)=>a.start-b.start||((a.point?1:0)-(b.point?1:0)));
+
+  for(const e of ev){
+    e.tz=zoneAt(e.start);
+    e.endTz=(e.end-e.start<=4*HOUR)?e.tz:zoneAt(e.end);
+    if(e.cut) e.d=e.d.replace("{{T}}",fmtTime(e.tz,e.cut));
+  }
+
+  return {ev,legs,departTs,arriveTs,homeTz,destTz,dir,total,rate,longWay,raw,mapDiff,wrapped,
+          maxPre,preDays,flightIdx,flightShift,nShift:preDays+post,switchTs,
+          cbt0:U0,sleepMin,planStart,prep:preDays};
+}
+
+/* ============================================================
+   4. WHAT AM I DOING RIGHT NOW
+   ============================================================ */
+const PRIORITY={sleep:6,nap:5,dark:4,light:3,light2:2,flight:1,mel:0,caf:0,done:0};
+const COLOR={sleep:"--c-sleep",nap:"--c-nap",dark:"--c-dark",light:"--c-light",light2:"--c-light2",
+             mel:"--c-mel",caf:"--c-caf",flight:"--c-flight",done:"--c-light"};
+const PHASE={sleep:"Sleep window",nap:"In-flight nap",dark:"Light avoidance",light:"Light exposure",
+             light2:"Light exposure",flight:"In the air"};
+
+function stateAt(p,now){
+  const live=p.ev.filter(e=>now>=e.start&&now<e.end);
+  const primary=live.filter(e=>PRIORITY[e.k]>=1).sort((a,b)=>PRIORITY[b.k]-PRIORITY[a.k])[0]||null;
+  const also=live.filter(e=>e!==primary&&PRIORITY[e.k]===0);
+  const upcoming=p.ev.filter(e=>e.start>now&&PRIORITY[e.k]>=3).sort((a,b)=>a.start-b.start)[0]||null;
+  const cycle=p.ev.filter(e=>e.k==="sleep"&&e.start<=now+18*HOUR).sort((a,b)=>b.start-a.start)[0]
+           || p.ev.find(e=>e.k==="sleep") || null;
+  return {primary,also,upcoming,cycle,live};
+}
+
+/* ============================================================
+   5. STATE
+   ============================================================ */
+const DEMO={
+  homeTz:"America/Phoenix",bed:"22:00",wake:"06:00",caf:true,demo:true,
+  prep:4,pace:"aggressive",mel:3,melT:"max",longWay:true,floor:"04:00",
+  legs:[
+    {from:"PHX",to:"LHR",fromTz:"America/Phoenix",toTz:"Europe/London",dep:"2026-10-07T16:10",arr:"2026-10-08T10:30"}
+  ]
+};
+/* A first-time visitor gets an empty form, not somebody else's itinerary.
+   The example is one tap away for anyone who wants to see the shape of it. */
+const DEF_LEAD=4;   // out of bed this many hours before take-off
+const FIXED={prep:4,pace:"aggressive",mel:3,melT:"max",longWay:true,caf:true,lead:DEF_LEAD};
+const EMPTY=Object.assign({homeTz:"",bed:"22:00",wake:"06:00",floor:"04:00",lead:DEF_LEAD,
+  legs:[{from:"",to:"",fromTz:"",toTz:"",dep:"",arr:""}]},FIXED);
+let cfg=null, plan=null, fresh=false;
+
+function load(){
+  try{
+    const s=localStorage.getItem("circshift");
+    if(s) return Object.assign(JSON.parse(JSON.stringify(EMPTY)),JSON.parse(s),FIXED);
+  }catch(e){}
+  fresh=true;
+  return JSON.parse(JSON.stringify(EMPTY));
+}
+const seenIcs=()=>{ try{ return !!localStorage.getItem("circshift.ics"); }catch(e){ return false; } };
+const markIcs=()=>{ try{ localStorage.setItem("circshift.ics","1"); }catch(e){} };
+function save(){ try{ localStorage.setItem("circshift",JSON.stringify(cfg)); }catch(e){} }
+
+/* ============================================================
+   6. RENDER
+   ============================================================ */
+function setNow(colorVar,phase,action,detail,e,now){
+  $("#nowLine").style.setProperty("--nowc","var("+colorVar+")");
+  $("#nowAction").textContent=action;
+  $("#nowWindow").textContent=e&&now
+    ? fmtTime(e.tz,e.start)+"\u2013"+fmtTime(e.endTz,e.end)+" "+tzAbbr(e.endTz,e.end)+" \u00b7 "+hm(e.end-now)+" left"
+    : "";
+}
+function renderNow(){
+  const now=Date.now();
+  $("#demo2").hidden=!(cfg.demo&&plan);
+  $("#nowLine").hidden=!plan;
+  if(!plan){
+    setNow("--c-free","\u2014","No trip yet","Add your flights under Trip and a shift plan is built from them.",null,null);
+    $("#nowNext").textContent=""; return;
+  }
+  const s=stateAt(plan,now);
+
+  if(now<plan.planStart){
+    const d=Math.ceil((plan.planStart-now)/DAY);
+    setNow("--c-free","Not started","Nothing to do",
+      "Your plan opens in "+d+" day"+(d===1?"":"s")+", "+plan.prep+
+      " days before departure. Until then keep your normal schedule \u2014 a steady baseline is what the plan shifts from.",null,null);
+  } else if(!s.primary){
+    setNow("--c-free","Open","Nothing to do",
+      "No light or sleep instruction is active. Eat, work, move around \u2014 just keep bright light out of the next window below.",null,null);
+  } else {
+    const e=s.primary;
+    const label=e.k==="flight"?"In the air":e.k==="sleep"?"Sleep":e.k==="nap"?"Nap now":e.k==="dark"?"Block light":e.k==="light2"?"Stay in the light":"Bright light";
+    setNow(COLOR[e.k],PHASE[e.k]||"Now",label,e.d,e,now);
+  }
+
+  const up=s.upcoming;
+  $("#nowNext").textContent=up?("next: "+up.h.toLowerCase()+" "+fmtTime(up.tz,up.start)+" \u00b7 in "+hm(up.start-now)):"";
+
+}
+
+function strategyHtml(){
+  const bits=[(plan.dir==="advance"?"Advance ":"Delay ")+r1(plan.total)+" h at "+plan.rate+" h/day."];
+  if(plan.preDays) bits.push(r1(plan.maxPre)+" h over "+plan.preDays+" night"+(plan.preDays===1?"":"s")+" at home.");
+  if(plan.flightIdx>=0) bits.push(r1(plan.flightShift-plan.maxPre)+" h on the flight.");
+  if(plan.wrapped) bits.push(shortPlace(plan.destTz)+" is "+r1(Math.abs(plan.mapDiff))+" h "+
+    (plan.mapDiff>0?"ahead":"behind")+", but the short way for your clock is "+
+    (plan.dir==="advance"?"forward":"back")+".");
+  else if(plan.longWay) bits.push("Going the long way round \u2014 delays shift faster.");
+  return '<div class="card"><h2>Strategy</h2><p class="sub" style="margin:0">'+bits.join(" ")+"</p></div>";
+}
+
+function renderPlan(){
+  const list=$("#planList"); list.innerHTML="";
+  if(!plan){
+    list.innerHTML='<div class="empty"><h2>No plan yet</h2><p>Enter your flights under Trip and the day-by-day schedule appears here.</p></div>';
+    $("#icsCard").hidden=true; $("#legendCard").hidden=true; $("#icsNudge").hidden=true; return;
+  }
+  $("#icsCard").hidden=false; $("#legendCard").hidden=false;
+  $("#icsNudge").hidden=seenIcs();
+  list.innerHTML=strategyHtml();
+  const now=Date.now();
+  const groups=new Map();
+  for(const e of plan.ev){
+    const k=dayKey(e.tz,e.start);
+    if(!groups.has(k)) groups.set(k,[]);
+    groups.get(k).push(e);
+  }
+  for(const [k,evs] of groups){
+    const first=evs[0];
+    const g=document.createElement("div");
+    const isToday=dayKey(first.tz,now)===k;
+    /* Label by calendar days, not by elapsed hours \u2014 a flight at 15:10 is
+       still "4 days" from an event four mornings earlier, not five. */
+    const depDay=calDay(plan.legs[0].fromTz,plan.departTs);
+    const arrDay=calDay(plan.destTz,plan.arriveTs);
+    const thisDay=calDay(first.tz,first.start);
+    let lbl;
+    if(thisDay<depDay){
+      const n=depDay-thisDay;
+      lbl=n+" day"+(n===1?"":"s")+" before departure";
+    } else if(thisDay<arrDay||first.start<plan.arriveTs){
+      lbl="Departure day";
+    } else {
+      const n=thisDay-arrDay;
+      lbl=n===0?"Arrival day":"Day "+(n+1)+" in "+shortPlace(plan.destTz);
+    }
+    /* A day spans two cycles \u2014 its morning belongs to the night just ended,
+       its evening to the night ahead. Label it with where the clock stands
+       by the end of the day. */
+    const shifts=evs.filter(e=>e.shift!=null).map(e=>e.shift);
+    const shTxt=!shifts.length?"":(Math.max(...shifts)<0.05?"baseline"
+      :(plan.dir==="advance"?"\u2212":"+")+r1(Math.max(...shifts)).toFixed(1)+" h");
+    g.innerHTML='<div class="dayhead'+(isToday?" today":"")+'"><span class="dl">'+
+      fmtDay(first.tz,first.start)+"<small>"+(isToday?"Today &middot; ":"")+lbl+"</small></span>"+
+      '<span class="ds">'+shTxt+"</span></div>";
+    for(const e of evs){
+      const live=now>=e.start&&now<e.end, past=now>=e.end;
+      /* A window that starts in one zone and ends in another reads as a
+         15-hour sleep unless both clocks are named. Name them. */
+      const cross=e.tz!==e.endTz&&!e.point;
+      const d=document.createElement("div");
+      d.className="ev"+(past?" past":"")+(live?" live":"")+(cross?" cross":"");
+      d.style.setProperty("--evc","var("+(COLOR[e.k]||"--c-free")+")");
+      const z=(tz,ts)=>cross?' <u>'+tzAbbr(tz,ts)+"</u>":"";
+      const t=e.point?fmtTime(e.tz,e.start)
+             :fmtTime(e.tz,e.start)+z(e.tz,e.start)+
+              "<small>"+fmtTime(e.endTz,e.end)+z(e.endTz,e.end)+"</small>";
+      d.innerHTML='<div class="t">'+t+'</div><div class="rail"></div><div class="b">'+
+        '<div class="h">'+e.h+'</div><div class="d">'+e.d+"</div>"+
+        (e.note?'<div class="note">'+e.note+"</div>":"")+"</div>";
+      g.appendChild(d);
+    }
+    list.appendChild(g);
+  }
+}
+
+/* ============================================================
+   7. ICS
+   ============================================================ */
+const icsStamp=ts=>new Date(ts).toISOString().replace(/[-:]/g,"").replace(/\.\d{3}/,"");
+const icsEsc=s=>String(s).replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\r?\n/g,"\\n");
+function fold(l){ const o=[]; while(l.length>73){ o.push(l.slice(0,73)); l=" "+l.slice(73);} o.push(l); return o.join("\r\n"); }
+function buildIcs(){
+  if(!plan) return "";
+  const L=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Circadian Shift//EN","CALSCALE:GREGORIAN",
+           "METHOD:PUBLISH","X-WR-CALNAME:Circadian Shift"];
+  plan.ev.forEach((e,i)=>{
+    if(e.k==="caf") return;
+    const end=e.point?e.start+15*MIN:e.end;
+    L.push("BEGIN:VEVENT",
+      "UID:cs-"+plan.departTs+"-"+i+"@circadianshift",
+      "DTSTAMP:"+icsStamp(Date.now()),
+      "DTSTART:"+icsStamp(e.start),
+      "DTEND:"+icsStamp(end),
+      fold("SUMMARY:"+icsEsc((e.k==="flight"?"\u2708 ":"")+e.h)),
+      fold("DESCRIPTION:"+icsEsc(e.d+(e.note?"\n\n"+e.note:""))),
+      "BEGIN:VALARM","TRIGGER:-PT5M","ACTION:DISPLAY",
+      fold("DESCRIPTION:"+icsEsc(e.h)),"END:VALARM","END:VEVENT");
+  });
+  L.push("END:VCALENDAR");
+  return L.join("\r\n");
+}
+
+/* ============================================================
+   7b. THE PLAN AS ONE PICTURE
+   ------------------------------------------------------------
+   Days down the page, 24 h across, drawn in whatever clock you are
+   living in that day. Meant to be saved to a camera roll and glanced
+   at \u2014 so it carries the shape of the week, not the fine print.
+   ============================================================ */
+/* ============================================================
+   7b. THE PLAN AS ASCII
+   ------------------------------------------------------------
+   One character per hour, 24 across, in whatever clock you are
+   living in that day. Pure ASCII on purpose: nothing here can be
+   mangled by an encoding, and it stays sharp at any zoom.
+   ============================================================ */
+function dayBounds(tz,ts){
+  const p=localParts(tz,ts);
+  const a=zonedToTs(tz,p.y,p.mo,p.d,0,0);
+  const q=localParts(tz,a+36*HOUR);
+  return [a,zonedToTs(tz,q.y,q.mo,q.d,0,0)];
+}
+/* Typed by hand, so accept what people actually type: 4:10pm, 4:10 PM,
+   16:10, 10/7/2026, 10-07-26, 10.7.2026. Canonical form goes back into the
+   box on blur so you can see it was understood. */
+function parseTime(v){
+  if(v===null||v===undefined) return null;
+  const m=String(v).trim().toLowerCase().replace(/\./g,"").match(/^(\d{1,2})(?::?(\d{2}))?\s*(am|pm|a|p)?$/);
+  if(!m) return null;
+  let h=+m[1]; const mi=m[2]?+m[2]:0, ap=m[3]?m[3].charAt(0):null;
+  if(mi>59) return null;
+  if(ap){ if(h<1||h>12) return null; h=(ap==="a")?(h===12?0:h):(h===12?12:h+12); }
+  else if(h>23) return null;
+  return padL(h,2).replace(" ","0")+":"+padL(mi,2).replace(" ","0");
+}
+function showTime(hhmm){
+  if(!hhmm) return "";
+  const a=hhmm.split(":"), h=+a[0], mi=a[1];
+  let hh=h%12; if(hh===0) hh=12;
+  return hh+":"+mi+" "+(h<12?"am":"pm");
+}
+function parseWhen(v){
+  if(!v) return null;
+  const m=String(v).trim().match(/^(\d{1,4})\s*[\/\-.:]\s*(\d{1,2})\s*[\/\-.:]\s*(\d{1,4})[\s,]+(.+)$/);
+  if(!m) return null;
+  let mo=+m[1], d=+m[2], y=+m[3];
+  if(mo>=1000){ const t0=mo; mo=d; d=y; y=t0; }   // year-first, e.g. 2026/10/07
+  if(y<100) y+=2000;
+  const t=parseTime(m[4]);
+  if(!t||mo<1||mo>12||d<1||d>31||y<2000||y>2100) return null;
+  return y+"-"+padL(mo,2).replace(" ","0")+"-"+padL(d,2).replace(" ","0")+"T"+t;
+}
+function showWhen(iso){
+  if(!iso) return "";
+  const a=iso.split("T"), d=a[0].split("-");
+  return d[1]+"/"+d[2]+"/"+d[0]+"  "+showTime(a[1]);
+}
+
+const pad=(s,n)=>{ s=String(s); while(s.length<n) s+=" "; return s; };
+const padL=(s,n)=>{ s=String(s); while(s.length<n) s=" "+s; return s; };
+
+function planAscii(){
+  if(!plan) return "";
+  const groups=new Map();
+  for(const e of plan.ev){
+    const k=dayKey(e.tz,e.start);
+    if(!groups.has(k)) groups.set(k,e);
+  }
+  const rows=[...groups.values()].map(f=>{
+    const [a,b]=dayBounds(f.tz,f.start);
+    return {tz:f.tz,a,b};
+  });
+
+  const L0=plan.legs[0], LN=plan.legs[plan.legs.length-1];
+  const LAB=9;                      // width of the date column
+  const out=[];
+  out.push(L0.from+" -> "+LN.to+"   "+(plan.dir==="advance"?"advance ":"delay ")+
+           r1(plan.total)+" h at "+plan.rate+" h/day");
+  out.push(fmtDate(rows[0].tz,rows[0].a+12*HOUR)+" - "+
+           fmtDate(rows[rows.length-1].tz,rows[rows.length-1].a+12*HOUR));
+  out.push("");
+  /* Build the ruler by index so two-digit hours sit on their own column. */
+  const rul=new Array(25).fill(" "), tic=new Array(24).fill(".");
+  for(let h=0;h<24;h+=3){
+    const t=String(h);
+    for(let k=0;k<t.length;k++) rul[h+k]=t.charAt(k);
+  }
+  for(let h=0;h<24;h+=6) tic[h]="|";
+  for(let h=3;h<24;h+=6) tic[h]="+";
+  out.push(padL("",LAB)+rul.join("").replace(/\s+$/,""));
+  out.push(padL("",LAB)+tic.join("").replace(/\s+$/,""));
+
+  const CH={light2:"*",light:"*",dark:"#",nap:"~",sleep:"S"};
+  let zone=null;
+  const flown={};                   // a departure instant falls inside two days
+                                    // when the clock changes; tag it once
+  for(const r of rows){
+    if(r.tz!==zone){
+      zone=r.tz;
+      out.push(padL("",LAB)+"-- "+shortPlace(zone)+" time --");
+    }
+    const cells=new Array(24).fill(" ");
+    for(const kind of ["light2","light","dark","nap","sleep"]){
+      for(const e of plan.ev){
+        if(e.k!==kind||e.point) continue;
+        const s0=Math.max(e.start,r.a), s1=Math.min(e.end,r.b);
+        if(s1<=s0) continue;
+        const i0=Math.floor((s0-r.a)/(r.b-r.a)*24);
+        const i1=Math.ceil((s1-r.a)/(r.b-r.a)*24);
+        for(let i=Math.max(0,i0);i<Math.min(24,i1);i++) cells[i]=CH[kind];
+      }
+    }
+    for(const e of plan.ev){
+      if(e.k!=="mel"||e.h.indexOf("Melatonin")!==0) continue;
+      if(e.start<r.a||e.start>=r.b) continue;
+      cells[Math.floor((e.start-r.a)/(r.b-r.a)*24)]="m";
+    }
+    /* Take-off goes in the grid, not in a trailing column: two-leg trips
+       used to push the line past phone width. */
+    plan.legs.forEach(function(l,li){
+      if(l.depTs>=r.a&&l.depTs<r.b&&!flown[li]){
+        flown[li]=1;
+        cells[Math.floor((l.depTs-r.a)/(r.b-r.a)*24)]=">";
+      }
+    });
+    const d=localParts(r.tz,r.a+12*HOUR);
+    const lab=new Intl.DateTimeFormat("en-GB",{timeZone:r.tz,weekday:"short"})
+                .format(new Date(r.a+12*HOUR))+" "+padL(d.d,2);
+    out.push(pad(lab,LAB)+cells.join(""));
+  }
+
+  out.push("");
+  out.push("  S sleep   * light   # block light");
+  out.push("  ~ nap     m melatonin   > take-off");
+  out.push("  coffee: only the 4 h after waking");
+  out.push("  blank = nothing to do");
+  return out.join("\n");
+}
+
+/* The same text, drawn large enough to save to a camera roll. */
+async function renderPlanImage(){
+  const txt=planAscii();
+  if(!txt) return null;
+  try{ await document.fonts.ready; }catch(e){}
+  const lines=txt.split("\n");
+  const FS=30, LH=42, PADX=40, PADY=44;
+  const cv=document.createElement("canvas");
+  const probe=cv.getContext("2d");
+  probe.font=FS+'px "IBM Plex Mono", ui-monospace, monospace';
+  const chw=probe.measureText("0").width;
+  const cols=lines.reduce(function(m,l){ return Math.max(m,l.length); },0);
+  const W=Math.ceil(cols*chw)+PADX*2, H=lines.length*LH+PADY*2;
+  const S=2;
+  cv.width=W*S; cv.height=H*S;
+  const g=cv.getContext("2d"); g.scale(S,S);
+  g.fillStyle="#ffffff"; g.fillRect(0,0,W,H);
+  g.font=FS+'px "IBM Plex Mono", ui-monospace, monospace';
+  g.textBaseline="top";
+  lines.forEach(function(l,i){
+    g.fillStyle=i<2?"#111111":"#333333";
+    g.fillText(l,PADX,PADY+i*LH);
+  });
+  return cv;
+}
+
+async function buildPlanImage(){
+  try{
+    const pre=$("#asciiPlan");
+    if(pre) pre.textContent=planAscii();
+    const cv=await renderPlanImage();
+    if(!cv) return;
+    planImgBlob=await new Promise(function(res){ cv.toBlob(res,"image/png"); });
+    if(planImgUrl) URL.revokeObjectURL(planImgUrl);
+    planImgUrl=URL.createObjectURL(planImgBlob);
+    $("#planImg").src=planImgUrl;
+  }catch(e){ console.error(e); }
+}
+let planImgBlob=null, planImgUrl=null;
+
+/* ============================================================
+   8. TRIP FORM
+   ============================================================ */
+let ZONES=[];
+try{ ZONES=Intl.supportedValuesOf("timeZone"); }
+catch(e){ ZONES=[...new Set(Object.values(AP).map(a=>a[0]))].sort(); }
+
+function fillZoneSelect(sel,val){
+  sel.innerHTML="";
+  for(const z of ZONES){
+    const o=document.createElement("option"); o.value=z; o.textContent=z.replace(/_/g," "); sel.appendChild(o);
+  }
+  sel.value=val||Intl.DateTimeFormat().resolvedOptions().timeZone;
+}
+function renderLegs(){
+  const wrap=$("#legs"); wrap.innerHTML="";
+  cfg.legs.forEach((l,i)=>{
+    const row=document.createElement("div"); row.className="leg";
+    row.innerHTML='<div class="lh"><span>Leg '+(i+1)+"</span>"+
+      (cfg.legs.length>1?'<button type="button" class="tiny ghost" data-del>Remove</button>':"")+"</div>"+
+      '<div class="row"><div><label for="lf'+i+'">From</label>'+
+      '<input id="lf'+i+'" data-f="from" value="'+(l.from||"")+'" maxlength="4" style="text-transform:uppercase"></div>'+
+      '<div><label for="lt'+i+'">To</label>'+
+      '<input id="lt'+i+'" data-f="to" value="'+(l.to||"")+'" maxlength="4" style="text-transform:uppercase"></div></div>'+
+      '<div class="row" style="margin-top:10px"><div><label for="ld'+i+'">Departs <em>&mdash; mm/dd/yyyy hh:mm am</em></label>'+
+      '<input id="ld'+i+'" type="text" inputmode="numeric" autocomplete="off" data-f="dep" value="'+showWhen(l.dep)+'"></div>'+
+      '<div><label for="la'+i+'">Arrives <em>&mdash; mm/dd/yyyy hh:mm am</em></label>'+
+      '<input id="la'+i+'" type="text" inputmode="numeric" autocomplete="off" data-f="arr" value="'+showWhen(l.arr)+'"></div></div>'+
+      '<div class="tzline" data-tz></div>';
+    wrap.appendChild(row);
+    row.querySelectorAll("input[data-f]").forEach(inp=>{
+      inp.addEventListener("input",()=>{
+        const f=inp.dataset.f;
+        if(f==="from"||f==="to") cfg.legs[i][f]=(inp.value||"").trim().toUpperCase();
+        else{ cfg.legs[i][f+"Raw"]=inp.value; cfg.legs[i][f]=parseWhen(inp.value)||""; }
+        resolveLegTz(i,row);
+      });
+      inp.addEventListener("blur",()=>{
+        const f=inp.dataset.f;
+        if((f==="dep"||f==="arr")&&cfg.legs[i][f]) inp.value=showWhen(cfg.legs[i][f]);
+      });
+    });
+    const del=row.querySelector("[data-del]");
+    if(del) del.addEventListener("click",()=>{ cfg.legs.splice(i,1); renderLegs(); });
+    resolveLegTz(i,row);
+  });
+  floorEffect();
+}
+/* The commonest way to ruin a plan is to leave the arrival on the departure
+   date. Show the air time under every leg so a wrong date is obvious, and
+   refuse to build on something that cannot be a real flight. */
+function legTimes(l){
+  if(!l.fromTz||!l.toTz||!l.dep||!l.arr) return null;
+  return {depTs:zonedToTs(l.fromTz,...l.dep.split(/[-T:]/).map(Number)),
+          arrTs:zonedToTs(l.toTz,...l.arr.split(/[-T:]/).map(Number))};
+}
+function legIssue(l,prev){
+  const t=legTimes(l);
+  if(!t) return {incomplete:true};
+  const h=(t.arrTs-t.depTs)/HOUR;
+  if(h<=0) return {err:"Arrival is before departure. If you land the next day, roll the arrival date forward."};
+  if(h<0.5) return {err:"Under 30 minutes in the air \u2014 check the times."};
+  if(h>20) return {err:r1(h)+" h in the air. Check the arrival date."};
+  if(prev&&prev.arrTs&&t.depTs<prev.arrTs) return {err:"This leg leaves before the previous one lands."};
+  if(l.fromTz===l.toTz&&l.from!==l.to&&h>6)
+    return {err:"Both airports came out as "+shortPlace(l.fromTz)+" time. Check the codes \u2014 that is why the air time looks wrong."};
+  return {ok:true,dur:t.arrTs-t.depTs,depTs:t.depTs,arrTs:t.arrTs};
+}
+function tripIssues(){
+  const out=[]; let prev=null;
+  cfg.legs.forEach((l,i)=>{
+    const code=(x)=>!x||x.length<3;
+    if(code(l.from)||code(l.to)) { out.push("Leg "+(i+1)+": enter both airport codes."); return; }
+    if(!l.fromTz||!l.toTz){ out.push("Leg "+(i+1)+": pick a time zone for the unrecognised code."); return; }
+    if(!l.dep||!l.arr){
+      const which=!l.dep?"departure":"arrival";
+      const raw=!l.dep?l.depRaw:l.arrRaw;
+      out.push("Leg "+(i+1)+": "+(raw?"could not read the "+which+' "'+raw+'". Use mm/dd/yyyy hh:mm am.'
+                                     :"enter both departure and arrival times."));
+      return;
+    }
+    const r=legIssue(l,prev);
+    if(r.err) out.push("Leg "+(i+1)+": "+r.err);
+    if(r.ok) prev=r;
+  });
+  return out;
+}
+
+/* Time zones come from the airport code. The picker below is a fallback for
+   codes that aren't in the table, and stays out of sight until one is typed
+   that isn't recognised. */
+function resolveLegTz(i,row){
+  const l=cfg.legs[i], out=row.querySelector("[data-tz]");
+  const fc=(l.from||"").toUpperCase(), tc=(l.to||"").toUpperCase();
+  const a=AP[fc], b=AP[tc];
+  if(a){ l.fromTz=a[0]; l.fromPick=false; }
+  if(b){ l.toTz=b[0]; l.toPick=false; }
+
+  const typed=x=>x&&x.length>=3;
+  const unknown=[];
+  if(typed(fc)&&!a&&!l.fromPick){ l.fromTz=""; unknown.push("from"); }
+  if(typed(tc)&&!b&&!l.toPick){ l.toTz=""; unknown.push("to"); }
+
+  if(unknown.length){
+    out.className="tzline bad";
+    out.textContent=(unknown.map(k=>k==="from"?fc:tc).join(" and "))+
+      " isn't in the airport list \u2014 pick the time zone below.";
+    ensureZonePickers(i,row,unknown);
+    return;
+  }
+  const z=row.querySelector("[data-zp]");
+  if(z&&(a||l.fromTz)&&(b||l.toTz)) z.remove();
+
+  if(!typed(fc)||!typed(tc)){
+    out.className="tzline";
+    out.textContent=typed(fc)&&a?(a[1]+" "+l.fromTz):"";
+    return;
+  }
+  const base=(a?a[1]:shortPlace(l.fromTz))+" "+l.fromTz+"  \u2192  "+(b?b[1]:shortPlace(l.toTz))+" "+l.toTz;
+  const r=legIssue(l,i>0?legIssue(cfg.legs[i-1],null):null);
+  if(r.err){ out.className="tzline bad"; out.textContent=base+"\n"+r.err; }
+  else if(r.ok){ out.className="tzline";
+    out.textContent=base+"\n"+fmtWhen(l.fromTz,r.depTs)+"  \u2192  "+fmtWhen(l.toTz,r.arrTs)+
+      "   \u00b7   "+hm(r.dur)+" in the air"; }
+  else{ out.className="tzline"; out.textContent=base; }
+}
+
+function ensureZonePickers(i,row,which){
+  let d=row.querySelector("[data-zp]");
+  if(!d){
+    d=document.createElement("div");
+    d.setAttribute("data-zp",""); d.className="row"; d.style.marginTop="10px";
+    d.innerHTML='<div data-side="from" hidden><label for="zf'+i+'">Departure time zone</label><select id="zf'+i+'" data-z="fromTz"></select></div>'+
+                '<div data-side="to" hidden><label for="zt'+i+'">Arrival time zone</label><select id="zt'+i+'" data-z="toTz"></select></div>';
+    row.appendChild(d);
+    d.querySelectorAll("select").forEach(sel=>{
+      fillZoneSelect(sel,cfg.legs[i][sel.dataset.z]);
+      sel.addEventListener("change",()=>{
+        cfg.legs[i][sel.dataset.z]=sel.value;
+        cfg.legs[i][sel.dataset.z==="fromTz"?"fromPick":"toPick"]=true;
+        resolveLegTz(i,row);
+      });
+    });
+  }
+  d.querySelectorAll("[data-side]").forEach(x=>{ x.hidden=which.indexOf(x.dataset.side)<0; });
+}
+
+
+/* Whatever is in the boxes wins. */
+function readLegs(){
+  cfg.legs.forEach((l,i)=>{
+    const f=$("#lf"+i), t=$("#lt"+i), d=$("#ld"+i), a=$("#la"+i);
+    if(f) l.from=(f.value||"").trim().toUpperCase();
+    if(t) l.to=(t.value||"").trim().toUpperCase();
+    if(d){ l.depRaw=d.value; l.dep=parseWhen(d.value)||""; }
+    if(a){ l.arrRaw=a.value; l.arr=parseWhen(a.value)||""; }
+    const A=AP[l.from], B=AP[l.to];
+    if(A){ l.fromTz=A[0]; l.fromPick=false; }
+    else if(!l.fromPick) l.fromTz="";
+    if(B){ l.toTz=B[0]; l.toPick=false; }
+    else if(!l.toPick) l.toTz="";
+  });
+}
+
+/* (2) The error under Build used to sit there until the next click. Clear it
+   the moment the form becomes valid. */
+function refreshValidity(){
+  const m=$("#buildMsg");
+  if(m&&!m.hidden&&!tripIssues().length) m.hidden=true;
+}
+
+function floorEffect(){
+  /* Note: no readLegs() here. The live listeners keep cfg current, and calling
+     it during boot would read empty boxes and wipe a saved trip. The
+     authoritative read happens once, in cfgFromForm(), when Build is pressed. */
+  refreshValidity();
+  const el=$("#floorEffect");
+  el.textContent="";
+  try{
+    if(tripIssues().length) return;
+    const probe=Object.assign({},cfg,{floor:$("#fFloor").value||"04:00",
+      bed:parseTime($("#fBed").value)||cfg.bed,wake:parseTime($("#fWake").value)||cfg.wake});
+    const p=buildPlan(probe);
+    const gain=Math.max(0,p.flightShift-p.maxPre);
+    const after=Math.max(0,Math.ceil((p.total-Math.max(p.flightShift,p.maxPre))/p.rate));
+    el.textContent=r1(p.maxPre)+" h before you fly"+
+      (gain>0.05?" \u00b7 the flight adds "+r1(gain)+" h":"")+
+      " \u00b7 "+after+" night"+(after===1?"":"s")+" to finish after you land";
+
+  }catch(e){}
+}
+
+function formFromCfg(){
+  $("#fBed").value=showTime(cfg.bed); $("#fWake").value=showTime(cfg.wake);
+  fillZoneSelect($("#fHomeTz"),cfg.homeTz);
+  $("#fFloor").value=showTime(cfg.floor||"04:00");
+  renderLegs(); floorEffect();
+}
+function cfgFromForm(){
+  cfg.bed=parseTime($("#fBed").value)||""; cfg.wake=parseTime($("#fWake").value)||"";
+  cfg.homeTz=$("#fHomeTz").value; cfg.caf=true;
+  Object.assign(cfg,FIXED); cfg.floor=parseTime($("#fFloor").value)||"04:00";
+  readLegs();
+}
+
+/* ============================================================
+   9. WIRING
+   ============================================================ */
+function rebuild(){
+  try{
+    const ok=cfg.legs.length&&!tripIssues().length;
+    plan=ok?buildPlan(cfg):null;
+  }catch(err){ plan=null; console.error(err); }
+  renderNow(); renderPlan();
+  $("#intro").hidden=!!plan;
+  $("#exportEmpty").hidden=!!plan;
+  $("#exportBody").hidden=!plan;
+  $("#imgCard").hidden=!plan;
+  if(plan){ $("#icsText").value=buildIcs(); buildPlanImage(); }
+}
+let pane="trip";
+function go(p){
+  pane=p;
+  $$(".pane").forEach(x=>x.classList.toggle("on",x.id==="pane-"+p));
+  $$("nav button").forEach(b=>b.setAttribute("aria-current",String(b.dataset.p===p)));
+  if(p==="plan") renderPlan();
+  document.querySelector("main").scrollTop=0;
+}
+$$("nav button").forEach(b=>b.addEventListener("click",()=>go(b.dataset.p)));
+$("#fFloor").addEventListener("input",()=>{ cfg.floor=$("#fFloor").value||"04:00"; floorEffect(); });
+$("#fBed").addEventListener("input",floorEffect);
+$("#fWake").addEventListener("input",floorEffect);
+$("#addLeg").addEventListener("click",()=>{
+  const last=cfg.legs[cfg.legs.length-1]||{};
+  cfg.legs.push({from:last.to||"",to:"",fromTz:last.toTz||"",toTz:"",dep:"",arr:""});
+  renderLegs();
+});
+$("#build").addEventListener("click",()=>{
+  const m=$("#buildMsg");
+  try{
+    cfgFromForm();
+    const bad=[];
+    if(!parseTime($("#fBed").value)) bad.push('Bedtime: could not read "'+$("#fBed").value+'". Use hh:mm pm.');
+    if(!parseTime($("#fWake").value)) bad.push('Wake: could not read "'+$("#fWake").value+'". Use hh:mm am.');
+    if(!parseTime($("#fFloor").value)) bad.push('Earliest wake: could not read "'+$("#fFloor").value+'".');
+    if(!bad.length) bad.push.apply(bad,tripIssues());
+    m.hidden=!bad.length;
+    if(bad.length){ m.textContent=bad.join("   "); return; }
+    cfg.demo=false; save(); rebuild();
+    if(!plan){ m.hidden=false; m.textContent="Could not build a plan from those flights. Check the airports and times."; return; }
+    go("export");
+  }catch(err){
+    m.hidden=false;
+    m.textContent="Something went wrong building the plan: "+err.message;
+    console.error(err);
+  }
+});
+$("#reset").addEventListener("click",()=>{
+  cfg=JSON.parse(JSON.stringify(EMPTY));
+  cfg.homeTz=Intl.DateTimeFormat().resolvedOptions().timeZone;
+  try{ localStorage.removeItem("circshift"); }catch(e){}
+  $("#buildMsg").hidden=true;
+  formFromCfg(); rebuild(); go("trip");
+});
+$("#icsShow").addEventListener("click",()=>{ $("#icsBox").hidden=!$("#icsBox").hidden; });
+$("#icsCopy").addEventListener("click",async()=>{
+  const t=$("#icsText"), btn=$("#icsCopy");
+  try{ await navigator.clipboard.writeText(t.value); btn.textContent="Copied"; }
+  catch(e){ t.select(); btn.textContent="Select all, then copy"; }
+  setTimeout(()=>{ btn.textContent="Copy to clipboard"; },2200);
+});
+/* Two hosts, two save paths: on claude.ai the viewer frame mediates
+   saves through the downloads capability; served from GitHub Pages it
+   is an ordinary blob link. Either way the text box stays as backup. */
+async function saveBlob(blob,name,btn,label){
+  const done=ok=>{ if(btn){ btn.textContent=ok?"Saved":label;
+    setTimeout(()=>{ btn.textContent=label; },2500); } };
+  try{
+    const dl=window.claude&&window.claude.use?await window.claude.use("downloads"):null;
+    if(dl&&dl.save){ await dl.save({filename:name,data:blob}); return done(true); }
+  }catch(e){ return done(false); }
+  try{
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url; a.download=name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),4000);
+    done(true);
+  }catch(e){ done(false); }
+}
+
+async function exportIcs(btn){
+  markIcs(); $("#icsNudge").hidden=true;
+  const text=buildIcs(), name="circadian-shift.ics";
+  btn.textContent="Saving\u2026";
+  const done=ok=>{ btn.textContent=ok?"Saved":"Download .ics"; if(!ok) $("#icsBox").hidden=false;
+                   setTimeout(()=>{ btn.textContent="Download .ics"; },2500); };
+  try{
+    const dl=window.claude&&window.claude.use?await window.claude.use("downloads"):null;
+    if(dl&&dl.save){
+      const blob=new Blob([text],{type:"text/calendar"});
+      try{ await dl.save({filename:name,data:blob}); return done(true); }
+      catch(e){ await dl.save({filename:name,data:text,mimeType:"text/calendar"}); return done(true); }
+    }
+  }catch(e){ return done(false); }
+  try{
+    const url=URL.createObjectURL(new Blob([text],{type:"text/calendar;charset=utf-8"}));
+    const a=document.createElement("a");
+    a.href=url; a.download=name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),4000);
+    done(true);
+  }catch(e){ done(false); }
+  $("#icsBox").hidden=false;
+}
+$("#icsDl").addEventListener("click",()=>exportIcs($("#icsDl")));
+$("#nudgeGo").addEventListener("click",()=>{ markIcs(); $("#icsNudge").hidden=true; go("export"); });
+$("#nudgeNo").addEventListener("click",()=>{ markIcs(); $("#icsNudge").hidden=true; });
+$("#asciiCopy").addEventListener("click",async()=>{
+  const btn=$("#asciiCopy");
+  try{ await navigator.clipboard.writeText(planAscii()); btn.textContent="Copied"; }
+  catch(e){ btn.textContent="Select it and copy"; }
+  setTimeout(()=>{ btn.textContent="Copy the text"; },2200);
+});
+$("#imgDl").addEventListener("click",async()=>{
+  if(!planImgBlob) await buildPlanImage();
+  if(planImgBlob) saveBlob(planImgBlob,"circadian-shift.png",$("#imgDl"),"Download the image");
+});
+$("#loadDemo").addEventListener("click",()=>{
+  cfg=JSON.parse(JSON.stringify(DEMO));
+  formFromCfg(); rebuild(); go("export");
+});
+
+cfg=load();
+if(!cfg.homeTz) cfg.homeTz=Intl.DateTimeFormat().resolvedOptions().timeZone;
+formFromCfg();
+rebuild();
+/* Inside the claude.ai viewer there is no home screen to install to. */
+if(window.claude&&window.claude.use) $("#installNote").hidden=true;
+go(fresh||!plan?"trip":"plan");
+let lastMin=-1;
+setInterval(()=>{
+  renderNow();
+  const m=Math.floor(Date.now()/MIN);
+  if(m!==lastMin){ lastMin=m; if(pane==="plan") renderPlan(); }
+},1000);
+</script>
