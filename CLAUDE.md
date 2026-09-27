@@ -86,17 +86,20 @@ them; several were arrived at by reversing an earlier choice.
   calendar alerts. A web page cannot wake you at 04:00, and one you must
   remember to open is no use at 04:00 either. A compact "now" line survives at
   the top of Plan as a convenience, not as the mechanism.
-- **Minimal, to a fault.** Black on white, hairline rules, no cards, no
-  shadows, no rounded corners. Prose was cut hard, twice now; prefer deleting
-  a sentence to adding one. The page-chrome font is one plain system
-  sans-serif (`Arial,Helvetica,sans-serif`, both `--mono` and `--sans`) —
-  the same stack as the owner's own site, deliberately matched, and no
-  webfont is loaded. That reverses an earlier choice (IBM Plex Mono via
-  Google Fonts for anything with a number in it, "an emacs-using computer
-  scientist's little open-source project"); the downloadable picture still
-  needs *a* monospace font for its character grid, so its canvas text asks
-  for `ui-monospace, monospace` — whatever the system provides, not a
-  specific loaded one.
+- **Minimal, to a fault — but the owner's document style, not an app's.**
+  Black on white, hairline rules, no cards, no shadows, no rounded corners.
+  Prose was cut hard, twice now; prefer deleting a sentence to adding one.
+  Type now deliberately matches the owner's own site (perreaultc.github.io),
+  not just its font: body text at 16px/1.58 in `#222`, and section
+  headings styled like that site's `h2` — sentence case, semibold, a
+  `border-bottom` rule, no small tracked-out uppercase labels. The font
+  stack is `Arial,Helvetica,sans-serif` for both `--mono` and `--sans`, no
+  webfont loaded. That reverses an earlier choice (IBM Plex Mono via
+  Google Fonts at ~13.5px, all-caps tracked labels for headings, "an
+  emacs-using computer scientist's little open-source project"); the
+  downloadable picture still needs *a* monospace font for its character
+  grid, so its canvas text asks for `ui-monospace, monospace` — whatever
+  the system provides, not a specific loaded one.
 - **One page, not three.** Plan and Export used to be separate tabs; Export
   is gone and its cards (calendar download, the picture, the legend) now
   render inside Plan, calendar download near the top. Pressing Build lands
