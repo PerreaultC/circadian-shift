@@ -42,9 +42,11 @@ starts landing *before* CBTmin, where it delays instead.
 
 ## Rules that are not obvious
 
-- **Livability floor.** Pre-flight shifting is capped by how early the user
-  will wake (`cfg.floor`, default 04:00), not by the calendar. Extra prep days
-  buy smaller nightly steps, not a bigger total shift.
+- **No livability floor.** How early the user is willing to wake before
+  departure is their call, not the page's — there used to be a `cfg.floor`
+  cap on this and it was removed deliberately. The only cap left is the
+  calendar: extra prep days buy smaller nightly steps, not a bigger total
+  shift (`maxPre = min(total, prep * rate)`).
 - **Sleep the flight, but only if it lands you in the morning.** A long leg
   arriving 03:00–12:00 local is slept end to end (take-off + 20 min to landing
   − 2 h) and yields most of the shift. A westbound leg landing in the evening
@@ -54,7 +56,19 @@ starts landing *before* CBTmin, where it delays instead.
   carries it. Evening light stops 90 min before bed (later light delays sleep
   onset), and the wind-down window after it is sleep hygiene, not phase work
   (`hyg: true` — exclude it from PRC assertions).
-- **Departure morning is set by the flight.** `DEF_LEAD = 4` h before take-off.
+- **A westbound flight slept end to end is still a delay day.** The
+  post-wake "Block light" window and the pre-bedtime "Stay in the
+  light"/"Bright light" windows are computed from two different anchors
+  (wake, and the *next* night's bedtime) that are normally many hours
+  apart — except on the flight-sleep cycle of a westbound trip landing in
+  the morning, where they can end up close enough to collide. "Block
+  light" is capped at the start of the afternoon window for exactly this
+  reason; it has no real Timeshifter example to check against, since the
+  one calibrated westbound route (`calibration.md`) lands in the evening
+  and never takes this branch.
+- **Departure morning is set by the flight.** `DEF_LEAD = 5` h before take-off
+  (time at the airport plus getting there and getting ready — not sleeping
+  that close to a flight is a practicality rule, not a phase-science one).
   Guaranteed invariant: never asleep inside that window. If the user is up
   before CBTmin, light is blocked until CBTmin passes — switching the lights on
   at 02:00 is in the *delay* zone and undoes days of work.
@@ -77,9 +91,10 @@ them; several were arrived at by reversing an earlier choice.
   computer scientist's little open-source project". Prose was cut hard once
   already; prefer deleting a sentence to adding one.
 - **No settings that do not earn their place.** A standard/aggressive toggle,
-  melatonin dose and timing dropdowns, and a prep-days slider were all built
-  and then removed. What survives: sleep hours, home zone, earliest wake, the
-  flights. Everything else is fixed in `FIXED` / `DEF_LEAD`.
+  melatonin dose and timing dropdowns, a prep-days slider, and an "earliest
+  you'll wake" livability floor were all built and then removed. What
+  survives: sleep hours, home zone, the flights. Everything else is fixed in
+  `FIXED` / `DEF_LEAD`.
 - **Show consequences, not just controls.** Where a setting is kept, the form
   states what it does with the current trip ("2 h before you fly, the flight
   adds 3.5 h, 2 nights to finish after you land") rather than leaving the user

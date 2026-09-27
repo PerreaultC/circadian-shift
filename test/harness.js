@@ -101,7 +101,7 @@ function loadApp(names, store) {
 }
 
 const FIXED_TRIP = {
-  homeTz: 'America/Phoenix', bed: '22:00', wake: '06:00', floor: '04:00'
+  homeTz: 'America/Phoenix', bed: '22:00', wake: '06:00'
 };
 const PHX_LHR = [{ from: 'PHX', to: 'LHR', fromTz: 'America/Phoenix', toTz: 'Europe/London',
                    dep: '2026-10-07T16:10', arr: '2026-10-08T10:30' }];

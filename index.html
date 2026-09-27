@@ -278,17 +278,13 @@ textarea{
           <label for="fHomeTz">Home time zone</label>
           <select id="fHomeTz"></select>
         </div>
-        <div style="margin-top:12px">
-          <label for="fFloor">Earliest you'll wake at home <em>&mdash; hh:mm am</em></label>
-          <input type="text" id="fFloor" value="4:00 am" autocomplete="off">
-          <p class="sub" id="floorEffect" style="margin:8px 0 0"></p>
-        </div>
-        <p class="sub" style="margin:14px 0 0">Starts 4 days before departure. Melatonin 1&ndash;3&nbsp;mg and caffeine cut-offs are included.</p>
+        <p class="sub" id="tripEffect" style="margin:14px 0 0"></p>
+        <p class="sub" style="margin:8px 0 0">Starts 4 days before departure. Melatonin 1&ndash;3&nbsp;mg and caffeine cut-offs are included.</p>
       </div>
 
       <div class="card">
         <h2>Flights</h2>
-        <p class="sub">Three-letter airport codes. Times exactly as printed on your ticket, including the arrival date if you land the next day. The plan assumes you are out of bed 4&nbsp;hours before take-off.</p>
+        <p class="sub">Three-letter airport codes. Times exactly as printed on your ticket, including the arrival date if you land the next day. The plan assumes you are out of bed 5&nbsp;hours before take-off.</p>
         <div id="legs"></div>
 
         <div style="display:flex;gap:10px;flex-wrap:wrap">
@@ -508,21 +504,10 @@ function buildPlan(c){
   if(c.longWay && raw!==0 && cost(round)<cost(direct)-0.5){ pick=round; longWay=true; }
   const dir=pick.dir, total=pick.amt, rate=dir==="advance"?R.adv:R.del, sgn=dir==="advance"?-1:1;
 
-  /* --- Livability ceiling. How far the schedule may move while you are
-     still at home living a normal life. Without this the arithmetic
-     happily asks you to wake at 01:00 on a Tuesday. The rest of the
-     shift is bought back on the flight and in the days after landing. --- */
-  const wakeMin=wh*60+wm, bedMin=bh*60+bm;
-  let maxPre=total;
-  if(c.floor&&c.floor!=="none"){
-    const [fh,fm]=c.floor.split(":").map(Number), fMin=fh*60+fm;
-    const room=(wakeMin-fMin+1440)%1440;  // hours of disruption you will accept
-    maxPre=Math.min(total, Math.max(0, room/60));
-  }
-  /* Spread whatever shift is available across every prep night rather than
-     front-loading it: smaller nightly steps are easier to actually sleep
-     through, and the total is capped by livability, not by the calendar. */
-  maxPre=Math.min(maxPre,c.prep*rate);      // four nights cannot do more than four steps
+  /* How far the schedule can move before departure is the user's call, not
+     this page's \u2014 no cap on how early they're willing to wake. Only the
+     calendar limits it: four nights cannot buy more than four steps. */
+  let maxPre=Math.min(total,c.prep*rate);
   const preDays=maxPre>0.05?c.prep:0;
   const preStep=preDays?maxPre/preDays:0;
 
@@ -645,7 +630,7 @@ function buildPlan(c){
         d:"The flight leaves too early to sleep first. Bank sleep the night before and take it on board instead.",note:null});
     }
     if(i>=0&&!C.skip){
-      add({k:"sleep",start:bed,end:wake,cbt,shift,i,forced:!!C.forced,
+      add({k:"sleep",start:bed,end:wake,cbt,shift,i,forced:!!C.forced,onPlane:!!C.onPlane,
         h:"Sleep",
         d:C.onPlane
           ? "Sleep the flight. Worth "+r1(shift-(cyc[n-1]?cyc[n-1].shift:0))+" h of shift."
@@ -687,11 +672,16 @@ function buildPlan(c){
         h:"Bright light",
         d:"Bright light, stopping 90 min before bed.",
         note: overlapsFlight(nextBed-5.5*HOUR,nextBed-1.5*HOUR)?"On board: shade up, screens bright.":null});
-      const darkFrom=(C.forced&&cbt>wake)?cbt:wake;
-      if(i>=0) add({k:"dark",start:darkFrom,end:darkFrom+3*HOUR,cbt,shift,i,
+      /* Capped at the start of the afternoon light window, same as the
+         advance branch caps its own post-wake tail at nextBed-2h: on a
+         short arrival day (the flight-sleep cycle, landing close to the
+         next bedtime) an uncapped 3 h block-light window can run past the
+         point where the schedule already wants bright light instead. */
+      const darkFrom=(C.forced&&cbt>wake)?cbt:wake, darkTo=Math.min(darkFrom+3*HOUR,t2a);
+      if(i>=0&&darkTo>darkFrom+30*MIN) add({k:"dark",start:darkFrom,end:darkTo,cbt,shift,i,
         h:"Block light",
         d:"Sunglasses on outdoors."+(darkFrom>wake?" Before "+fmtTime(zoneAt(cbt),cbt)+", light is fine \u2014 it helps.":""),
-        note: overlapsFlight(darkFrom,darkFrom+3*HOUR)?"On board: sunglasses, shade down.":null});
+        note: overlapsFlight(darkFrom,darkTo)?"On board: sunglasses, shade down.":null});
     }
 
     if(c.mel>0&&dir==="advance"&&i>=0&&!settled&&!quiet){
@@ -780,16 +770,17 @@ function stateAt(p,now){
    ============================================================ */
 const DEMO={
   homeTz:"America/Phoenix",bed:"22:00",wake:"06:00",caf:true,demo:true,
-  prep:4,pace:"aggressive",mel:3,melT:"max",longWay:true,floor:"04:00",
+  prep:4,pace:"aggressive",mel:3,melT:"max",longWay:true,
   legs:[
     {from:"PHX",to:"LHR",fromTz:"America/Phoenix",toTz:"Europe/London",dep:"2026-10-07T16:10",arr:"2026-10-08T10:30"}
   ]
 };
 /* A first-time visitor gets an empty form, not somebody else's itinerary.
    The example is one tap away for anyone who wants to see the shape of it. */
-const DEF_LEAD=4;   // out of bed this many hours before take-off
+const DEF_LEAD=5;   // out of bed this many hours before take-off: time at
+                     // the airport plus getting there and getting ready
 const FIXED={prep:4,pace:"aggressive",mel:3,melT:"max",longWay:true,caf:true,lead:DEF_LEAD};
-const EMPTY=Object.assign({homeTz:"",bed:"22:00",wake:"06:00",floor:"04:00",lead:DEF_LEAD,
+const EMPTY=Object.assign({homeTz:"",bed:"22:00",wake:"06:00",lead:DEF_LEAD,
   legs:[{from:"",to:"",fromTz:"",toTz:"",dep:"",arr:""}]},FIXED);
 let cfg=null, plan=null, fresh=false;
 
@@ -1206,7 +1197,7 @@ function renderLegs(){
     if(del) del.addEventListener("click",()=>{ cfg.legs.splice(i,1); renderLegs(); });
     resolveLegTz(i,row);
   });
-  floorEffect();
+  tripEffect();
 }
 /* The commonest way to ruin a plan is to leave the arrival on the departure
    date. Show the air time under every leg so a wrong date is obvious, and
@@ -1331,16 +1322,16 @@ function refreshValidity(){
   if(m&&!m.hidden&&!tripIssues().length) m.hidden=true;
 }
 
-function floorEffect(){
+function tripEffect(){
   /* Note: no readLegs() here. The live listeners keep cfg current, and calling
      it during boot would read empty boxes and wipe a saved trip. The
      authoritative read happens once, in cfgFromForm(), when Build is pressed. */
   refreshValidity();
-  const el=$("#floorEffect");
+  const el=$("#tripEffect");
   el.textContent="";
   try{
     if(tripIssues().length) return;
-    const probe=Object.assign({},cfg,{floor:$("#fFloor").value||"04:00",
+    const probe=Object.assign({},cfg,{
       bed:parseTime($("#fBed").value)||cfg.bed,wake:parseTime($("#fWake").value)||cfg.wake});
     const p=buildPlan(probe);
     const gain=Math.max(0,p.flightShift-p.maxPre);
@@ -1355,13 +1346,12 @@ function floorEffect(){
 function formFromCfg(){
   $("#fBed").value=showTime(cfg.bed); $("#fWake").value=showTime(cfg.wake);
   fillZoneSelect($("#fHomeTz"),cfg.homeTz);
-  $("#fFloor").value=showTime(cfg.floor||"04:00");
-  renderLegs(); floorEffect();
+  renderLegs(); tripEffect();
 }
 function cfgFromForm(){
   cfg.bed=parseTime($("#fBed").value)||""; cfg.wake=parseTime($("#fWake").value)||"";
   cfg.homeTz=$("#fHomeTz").value; cfg.caf=true;
-  Object.assign(cfg,FIXED); cfg.floor=parseTime($("#fFloor").value)||"04:00";
+  Object.assign(cfg,FIXED);
   readLegs();
 }
 
@@ -1389,9 +1379,8 @@ function go(p){
   document.querySelector("main").scrollTop=0;
 }
 $$("nav button").forEach(b=>b.addEventListener("click",()=>go(b.dataset.p)));
-$("#fFloor").addEventListener("input",()=>{ cfg.floor=$("#fFloor").value||"04:00"; floorEffect(); });
-$("#fBed").addEventListener("input",floorEffect);
-$("#fWake").addEventListener("input",floorEffect);
+$("#fBed").addEventListener("input",tripEffect);
+$("#fWake").addEventListener("input",tripEffect);
 $("#addLeg").addEventListener("click",()=>{
   const last=cfg.legs[cfg.legs.length-1]||{};
   cfg.legs.push({from:last.to||"",to:"",fromTz:last.toTz||"",toTz:"",dep:"",arr:""});
@@ -1404,7 +1393,6 @@ $("#build").addEventListener("click",()=>{
     const bad=[];
     if(!parseTime($("#fBed").value)) bad.push('Bedtime: could not read "'+$("#fBed").value+'". Use hh:mm pm.');
     if(!parseTime($("#fWake").value)) bad.push('Wake: could not read "'+$("#fWake").value+'". Use hh:mm am.');
-    if(!parseTime($("#fFloor").value)) bad.push('Earliest wake: could not read "'+$("#fFloor").value+'".');
     if(!bad.length) bad.push.apply(bad,tripIssues());
     m.hidden=!bad.length;
     if(bad.length){ m.textContent=bad.join("   "); return; }

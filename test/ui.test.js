@@ -27,10 +27,10 @@ test('no native date or time pickers survive', () => {
 
 function fillForm($, over) {
   const v = Object.assign({
-    bed: '10 pm', wake: '6am', floor: '4:00 am', tz: 'America/Phoenix',
+    bed: '10 pm', wake: '6am', tz: 'America/Phoenix',
     from: 'PHX', to: 'LHR', dep: '10/07/2026 4:10 pm', arr: '10-08-2026 10:30 am'
   }, over || {});
-  $('#fBed').value = v.bed; $('#fWake').value = v.wake; $('#fFloor').value = v.floor;
+  $('#fBed').value = v.bed; $('#fWake').value = v.wake;
   $('#fHomeTz').value = v.tz;
   $('#lf0').value = v.from; $('#lt0').value = v.to;
   $('#ld0').value = v.dep; $('#la0').value = v.arr;
@@ -87,7 +87,7 @@ test('Reset clears a stale error', () => {
 
 test('a saved trip opens on Plan; a fresh visitor opens on Trip', () => {
   const saved = JSON.stringify({
-    homeTz: 'America/Phoenix', bed: '22:00', wake: '06:00', floor: '04:00',
+    homeTz: 'America/Phoenix', bed: '22:00', wake: '06:00',
     legs: PHX_LHR
   });
   const fresh = loadApp(['plan'], {});
