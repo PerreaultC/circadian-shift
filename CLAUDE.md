@@ -84,9 +84,18 @@ them; several were arrived at by reversing an earlier choice.
   states what it does with the current trip ("2 h before you fly, the flight
   adds 3.5 h, 2 nights to finish after you land") rather than leaving the user
   to infer it.
-- **Pure ASCII output.** The plan picture is an ASCII chart, not a drawn one —
-  it survives any encoding, stays sharp at any zoom, and fits phone width at
-  ~37 columns. A literal arrow character previously rendered as mojibake.
+- **Pure ASCII output.** The copyable text (`planAscii`) is an ASCII chart,
+  not a drawn one — it survives any encoding, stays sharp at any zoom, and
+  fits phone width at ~37 columns, so its hour ruler stays at 3 h increments
+  (a 2-digit hour needs a spare column on each side). A literal arrow
+  character previously rendered as mojibake. The downloadable picture reuses
+  that grid but draws its own hour ruler on top: every hour gets a tick and a
+  rotated label, since a photo has no phone-width limit to respect and
+  rotating sidesteps the same 2-digit collision without widening the image
+  (it stays portrait-shaped, the better to view as a saved photo). There is
+  no more on-screen ASCII preview or "copy the text" button in Export — the
+  picture is the take-away now; the calendar download is the one styled as
+  the primary action.
 - **Hand-typed dates.** Native `datetime-local` / `time` pickers were removed
   as fiddly. Fields are plain text with forgiving parsers (`parseTime`,
   `parseWhen`) and canonical reformatting on blur.

@@ -219,13 +219,10 @@ textarea{
         </div>
       </div>
       <div class="card" id="imgCard" hidden>
-        <h2>The plan on one screen</h2>
-        <pre id="asciiPlan"></pre>
-        <p class="sub">Press and hold the image below to save it to Photos, or copy the text above.</p>
+        <p class="sub">Save this picture to Photos for a one-glance overview of the week.</p>
         <div id="imgWrap"><img id="planImg" alt="Day-by-day chart of the shift plan" style="width:100%;display:block;border:1px solid var(--rule)"></div>
         <div class="actions">
-          <button class="primary" id="imgDl">Download the image</button>
-          <button id="asciiCopy">Copy the text</button>
+          <button id="imgDl">Download the image</button>
         </div>
       </div>
       <div class="card" id="legendCard" hidden>
@@ -827,9 +824,16 @@ function renderNow(){
 }
 
 function strategyHtml(){
-  const bits=[(plan.dir==="advance"?"Advance ":"Delay ")+r1(plan.total)+" h at "+plan.rate+" h/day."];
-  if(plan.preDays) bits.push(r1(plan.maxPre)+" h over "+plan.preDays+" night"+(plan.preDays===1?"":"s")+" at home.");
-  if(plan.flightIdx>=0) bits.push(r1(plan.flightShift-plan.maxPre)+" h on the flight.");
+  /* Spelled out as a running total, not separate facts, so the numbers
+     visibly add up to the goal instead of leaving the reader to check. */
+  const bits=[(plan.dir==="advance"?"Advance":"Delay")+" your clock "+r1(plan.total)+
+    " h in total \u2014 in steps of up to "+plan.rate+" h/day."];
+  if(plan.preDays) bits.push(r1(plan.maxPre)+" h of that happens over the "+plan.preDays+
+    " night"+(plan.preDays===1?"":"s")+" before you fly, at home.");
+  if(plan.flightIdx>=0) bits.push(r1(plan.flightShift-plan.maxPre)+" h more happens on the flight itself.");
+  const done=Math.max(plan.flightShift,plan.maxPre), remainder=plan.total-done, postNights=plan.nShift-plan.preDays;
+  if(remainder>0.05) bits.push("The remaining "+r1(remainder)+" h happens over "+postNights+
+    " night"+(postNights===1?"":"s")+" after you land.");
   if(plan.wrapped) bits.push(shortPlace(plan.destTz)+" is "+r1(Math.abs(plan.mapDiff))+" h "+
     (plan.mapDiff>0?"ahead":"behind")+", but the short way for your clock is "+
     (plan.dir==="advance"?"forward":"back")+".");
@@ -987,6 +991,7 @@ function showWhen(iso){
 
 const pad=(s,n)=>{ s=String(s); while(s.length<n) s+=" "; return s; };
 const padL=(s,n)=>{ s=String(s); while(s.length<n) s=" "+s; return s; };
+const LAB=9;                      // width of the date column, in characters
 
 function planAscii(){
   if(!plan) return "";
@@ -1001,23 +1006,12 @@ function planAscii(){
   });
 
   const L0=plan.legs[0], LN=plan.legs[plan.legs.length-1];
-  const LAB=9;                      // width of the date column
   const out=[];
   out.push(L0.from+" -> "+LN.to+"   "+(plan.dir==="advance"?"advance ":"delay ")+
            r1(plan.total)+" h at "+plan.rate+" h/day");
   out.push(fmtDate(rows[0].tz,rows[0].a+12*HOUR)+" - "+
            fmtDate(rows[rows.length-1].tz,rows[rows.length-1].a+12*HOUR));
   out.push("");
-  /* Build the ruler by index so two-digit hours sit on their own column. */
-  const rul=new Array(25).fill(" "), tic=new Array(24).fill(".");
-  for(let h=0;h<24;h+=3){
-    const t=String(h);
-    for(let k=0;k<t.length;k++) rul[h+k]=t.charAt(k);
-  }
-  for(let h=0;h<24;h+=6) tic[h]="|";
-  for(let h=3;h<24;h+=6) tic[h]="+";
-  out.push(padL("",LAB)+rul.join("").replace(/\s+$/,""));
-  out.push(padL("",LAB)+tic.join("").replace(/\s+$/,""));
 
   const CH={light2:"*",light:"*",dark:"#",nap:"~",sleep:"S"};
   let zone=null;
@@ -1066,36 +1060,75 @@ function planAscii(){
   return out.join("\n");
 }
 
-/* The same text, drawn large enough to save to a camera roll. */
+/* The same text, drawn large enough to save to a camera roll \u2014 except the
+   hour ruler, which the copyable text keeps at every 3 h to fit phone width
+   (see planAscii) but the picture draws at every hour, since it is not
+   typed into anything and has the room. Two-digit hours cannot sit
+   side by side in a single character column, so each is rotated instead
+   of widened: that keeps the picture the same portrait shape it would
+   otherwise be, which matters since it is meant to be viewed as a photo
+   saved from a phone held upright. */
 async function renderPlanImage(){
   const txt=planAscii();
   if(!txt) return null;
   try{ await document.fonts.ready; }catch(e){}
   const lines=txt.split("\n");
-  const FS=30, LH=42, PADX=40, PADY=44;
+  const FS=30, LH=42, PADX=40, PADY=44, TICKH=46;
   const cv=document.createElement("canvas");
   const probe=cv.getContext("2d");
   probe.font=FS+'px "IBM Plex Mono", ui-monospace, monospace';
   const chw=probe.measureText("0").width;
   const cols=lines.reduce(function(m,l){ return Math.max(m,l.length); },0);
-  const W=Math.ceil(cols*chw)+PADX*2, H=lines.length*LH+PADY*2;
+  const W=Math.ceil(cols*chw)+PADX*2, H=lines.length*LH+PADY*2+TICKH;
   const S=2;
   cv.width=W*S; cv.height=H*S;
   const g=cv.getContext("2d"); g.scale(S,S);
   g.fillStyle="#ffffff"; g.fillRect(0,0,W,H);
   g.font=FS+'px "IBM Plex Mono", ui-monospace, monospace';
   g.textBaseline="top";
-  lines.forEach(function(l,i){
-    g.fillStyle=i<2?"#111111":"#333333";
+
+  /* Route + date range, above the ruler. */
+  lines.slice(0,2).forEach(function(l,i){
+    g.fillStyle="#111111";
     g.fillText(l,PADX,PADY+i*LH);
+  });
+
+  /* One tick per hour: a taller mark every 6 h, mid every 3 h, so the
+     old landmarks still pop out of the denser grid. Every hour gets a
+     rotated label \u2014 sideways, so a 2-digit hour needs no more width
+     than one already-narrow character column. */
+  const gx=h=>PADX+(LAB+h)*chw+chw/2;
+  const rulerTop=PADY+2*LH, tickBase=rulerTop+TICKH-10;
+  g.strokeStyle="#cccccc";
+  for(let h=0;h<24;h++){
+    const len=h%6===0?15:h%3===0?10:5;
+    g.lineWidth=h%6===0?1.5:1;
+    g.beginPath();
+    g.moveTo(gx(h),tickBase-len); g.lineTo(gx(h),tickBase);
+    g.stroke();
+  }
+  g.fillStyle="#555555"; g.font='12px "IBM Plex Mono", ui-monospace, monospace';
+  g.textAlign="right";
+  for(let h=0;h<24;h++){
+    g.save();
+    g.translate(gx(h),tickBase-18);
+    g.rotate(-Math.PI/2);
+    g.fillText(String(h),0,0);
+    g.restore();
+  }
+  g.textAlign="left";
+  g.font=FS+'px "IBM Plex Mono", ui-monospace, monospace';
+
+  /* Zone headers, day rows, and the legend, below the ruler. */
+  lines.slice(2).forEach(function(l,i){
+    g.fillStyle=i===0?"#111111":"#333333";
+    g.fillText(l,PADX,PADY+TICKH+(i+2)*LH);
   });
   return cv;
 }
 
 async function buildPlanImage(){
   try{
-    const pre=$("#asciiPlan");
-    if(pre) pre.textContent=planAscii();
     const cv=await renderPlanImage();
     if(!cv) return;
     planImgBlob=await new Promise(function(res){ cv.toBlob(res,"image/png"); });
@@ -1424,12 +1457,6 @@ async function exportIcs(btn){
 $("#icsDl").addEventListener("click",()=>exportIcs($("#icsDl")));
 $("#nudgeGo").addEventListener("click",()=>{ markIcs(); $("#icsNudge").hidden=true; go("export"); });
 $("#nudgeNo").addEventListener("click",()=>{ markIcs(); $("#icsNudge").hidden=true; });
-$("#asciiCopy").addEventListener("click",async()=>{
-  const btn=$("#asciiCopy");
-  try{ await navigator.clipboard.writeText(planAscii()); btn.textContent="Copied"; }
-  catch(e){ btn.textContent="Select it and copy"; }
-  setTimeout(()=>{ btn.textContent="Copy the text"; },2200);
-});
 $("#imgDl").addEventListener("click",async()=>{
   if(!planImgBlob) await buildPlanImage();
   if(planImgBlob) saveBlob(planImgBlob,"circadian-shift.png",$("#imgDl"),"Download the image");
