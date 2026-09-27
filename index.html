@@ -131,20 +131,6 @@ textarea{
   width:100%;height:150px;background:var(--wash);border:1px solid var(--rule);
   color:var(--dim);border-radius:0;padding:9px;font-family:var(--mono);font-size:12.5px;
 }
-.legend{display:flex;flex-wrap:wrap;gap:6px 18px}
-.legend div{display:flex;align-items:center;gap:7px;font-size:13.5px;color:var(--dim)}
-.dot{width:9px;height:2px;flex:none;display:inline-block}
-
-/* NOW: one line, not a dashboard */
-.nowline{
-  border-top:1px solid var(--rule);padding:14px 0;
-  display:flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline;font-size:15.5px;
-}
-.nowline .k{font-size:13px;color:var(--faint)}
-.nowline .v{font-weight:600;color:var(--nowc,var(--text))}
-.nowline .w{color:var(--dim);font-variant-numeric:tabular-nums}
-.nowline .n{color:var(--faint);font-variant-numeric:tabular-nums}
-
 /* plan */
 .dayhead{
   display:flex;align-items:baseline;justify-content:space-between;gap:10px;
@@ -193,12 +179,6 @@ textarea{
     <!-- ============ PLAN + EXPORT, one page ============ -->
     <section class="pane" id="pane-plan">
       <div class="demobar" id="demo2" hidden>Loaded with the Phoenix&ndash;London trip. Change it, or start your own, under Trip.</div>
-      <div class="nowline" id="nowLine" hidden>
-        <span class="k">now</span>
-        <span class="v" id="nowAction"></span>
-        <span class="w" id="nowWindow"></span>
-        <span class="n" id="nowNext"></span>
-      </div>
       <div id="strategyCard"></div>
       <div class="card" id="icsCard" hidden>
         <h2>Calendar export</h2>
@@ -212,7 +192,6 @@ textarea{
           <div class="actions"><button id="icsCopy">Copy to clipboard</button></div>
         </div>
       </div>
-      <div id="planList"></div>
       <div class="card" id="imgCard" hidden>
         <p class="sub">Save this picture to Photos for a one-glance overview of the week.</p>
         <div id="imgWrap"><img id="planImg" alt="Day-by-day chart of the shift plan" style="width:100%;display:block;border:1px solid var(--rule)"></div>
@@ -220,19 +199,7 @@ textarea{
           <button id="imgDl">Download the image</button>
         </div>
       </div>
-      <div class="card" id="legendCard" hidden>
-        <h2>Legend</h2>
-        <div class="legend">
-          <div><i class="dot" style="background:var(--c-light)"></i>Bright light</div>
-          <div><i class="dot" style="background:var(--c-light2)"></i>Stay in the light</div>
-          <div><i class="dot" style="background:var(--c-dark)"></i>Block light</div>
-          <div><i class="dot" style="background:var(--c-sleep)"></i>Sleep</div>
-          <div><i class="dot" style="background:var(--c-nap)"></i>In-flight nap</div>
-          <div><i class="dot" style="background:var(--c-mel)"></i>Melatonin</div>
-          <div><i class="dot" style="background:var(--c-caf)"></i>Caffeine</div>
-          <div><i class="dot" style="background:var(--c-flight)"></i>Flight</div>
-        </div>
-      </div>
+      <div id="planList"></div>
     </section>
 
     <!-- ============ TRIP ============ -->
@@ -243,11 +210,6 @@ textarea{
           <div><label for="fBed">Bedtime <em>&mdash; hh:mm pm</em></label><input type="text" id="fBed" value="10:00 pm" autocomplete="off"></div>
           <div><label for="fWake">Wake <em>&mdash; hh:mm am</em></label><input type="text" id="fWake" value="6:00 am" autocomplete="off"></div>
         </div>
-        <div style="margin-top:12px">
-          <label for="fHomeTz">Home time zone</label>
-          <select id="fHomeTz"></select>
-        </div>
-        <p class="sub" id="tripEffect" style="margin:14px 0 0"></p>
       </div>
 
       <div class="card">
@@ -454,7 +416,7 @@ function buildPlan(c){
   })).sort((a,b)=>a.depTs-b.depTs);
 
   const departTs=legs[0].depTs, arriveTs=legs[legs.length-1].arrTs;
-  const homeTz=c.homeTz, destTz=legs[legs.length-1].toTz;
+  const homeTz=legs[0].fromTz, destTz=legs[legs.length-1].toTz;   // home is wherever the trip departs from
 
   /* --- how far, and which way round --- */
   const mapDiff=(tzOffset(destTz,arriveTs)-tzOffset(homeTz,departTs))/60;
@@ -471,10 +433,19 @@ function buildPlan(c){
 
   /* How far the schedule can move before departure is the user's call, not
      this page's \u2014 no cap on how early they're willing to wake. Only the
-     calendar limits it: four nights cannot buy more than four steps. */
-  let maxPre=Math.min(total,c.prep*rate);
-  const preDays=maxPre>0.05?c.prep:0;
-  const preStep=preDays?maxPre/preDays:0;
+     calendar limits it: four nights cannot buy more than four steps.
+
+     Ramped, not flat: the first prep night is a gentle nudge, each night
+     after grows by a fixed increment, and only the last night before
+     departure lands on the safety-max rate \u2014 the rate cap says "never
+     more than this in one night," not "every night must hit it starting
+     on the first one." A flat rate from night one would reach further in
+     the same number of nights, but with no ramp-in at all; this reaches
+     less before departure by design by leaning harder on the flight and
+     the nights after landing to make up the rest. */
+  const preDays=total>0.05?c.prep:0;
+  const preRamp=n=>preDays?(rate/preDays)*n*(n+1)/2:0;   // cumulative shift after n prep nights
+  let maxPre=preDays?Math.min(total,preRamp(preDays)):0;
 
   /* Cycle i's UNSHIFTED clock low point. Cycle 0 is the first shifted
      night; cycle -1 contributes the daytime that leads into it. */
@@ -533,7 +504,7 @@ function buildPlan(c){
       bed=flightBed; wake=flightWake; cbt=wake-2*HOUR; onPlane=true;
     }else{
       if(i<0) shift=0;
-      else if(U(i)<departTs) shift=Math.min((i+1)*preStep,maxPre,total);
+      else if(U(i)<departTs) shift=Math.min(preRamp(i+1),maxPre,total);
       else if(dir==="delay"&&landBed&&!landed){
         shift=(landBed+sleepMin*MIN-2*HOUR-U(i))/HOUR;
         landed=true;
@@ -712,29 +683,16 @@ function buildPlan(c){
 }
 
 /* ============================================================
-   4. WHAT AM I DOING RIGHT NOW
+   4. EVENT COLORS
    ============================================================ */
-const PRIORITY={sleep:6,nap:5,dark:4,light:3,light2:2,flight:1,mel:0,caf:0,done:0};
 const COLOR={sleep:"--c-sleep",nap:"--c-nap",dark:"--c-dark",light:"--c-light",light2:"--c-light2",
              mel:"--c-mel",caf:"--c-caf",flight:"--c-flight",done:"--c-light"};
-const PHASE={sleep:"Sleep window",nap:"In-flight nap",dark:"Light avoidance",light:"Light exposure",
-             light2:"Light exposure",flight:"In the air"};
-
-function stateAt(p,now){
-  const live=p.ev.filter(e=>now>=e.start&&now<e.end);
-  const primary=live.filter(e=>PRIORITY[e.k]>=1).sort((a,b)=>PRIORITY[b.k]-PRIORITY[a.k])[0]||null;
-  const also=live.filter(e=>e!==primary&&PRIORITY[e.k]===0);
-  const upcoming=p.ev.filter(e=>e.start>now&&PRIORITY[e.k]>=3).sort((a,b)=>a.start-b.start)[0]||null;
-  const cycle=p.ev.filter(e=>e.k==="sleep"&&e.start<=now+18*HOUR).sort((a,b)=>b.start-a.start)[0]
-           || p.ev.find(e=>e.k==="sleep") || null;
-  return {primary,also,upcoming,cycle,live};
-}
 
 /* ============================================================
    5. STATE
    ============================================================ */
 const DEMO={
-  homeTz:"America/Phoenix",bed:"22:00",wake:"06:00",caf:true,demo:true,
+  bed:"22:00",wake:"06:00",caf:true,demo:true,
   prep:4,pace:"aggressive",mel:3,melT:"max",longWay:true,
   legs:[
     {from:"PHX",to:"LHR",fromTz:"America/Phoenix",toTz:"Europe/London",dep:"2026-10-07T16:10",arr:"2026-10-08T10:30"}
@@ -745,7 +703,7 @@ const DEMO={
 const DEF_LEAD=5;   // out of bed this many hours before take-off: time at
                      // the airport plus getting there and getting ready
 const FIXED={prep:4,pace:"aggressive",mel:3,melT:"max",longWay:true,caf:true,lead:DEF_LEAD};
-const EMPTY=Object.assign({homeTz:"",bed:"22:00",wake:"06:00",lead:DEF_LEAD,
+const EMPTY=Object.assign({bed:"22:00",wake:"06:00",lead:DEF_LEAD,
   legs:[{from:"",to:"",fromTz:"",toTz:"",dep:"",arr:""}]},FIXED);
 let cfg=null, plan=null, fresh=false;
 
@@ -762,41 +720,6 @@ function save(){ try{ localStorage.setItem("circshift",JSON.stringify(cfg)); }ca
 /* ============================================================
    6. RENDER
    ============================================================ */
-function setNow(colorVar,phase,action,detail,e,now){
-  $("#nowLine").style.setProperty("--nowc","var("+colorVar+")");
-  $("#nowAction").textContent=action;
-  $("#nowWindow").textContent=e&&now
-    ? fmtTime(e.tz,e.start)+"\u2013"+fmtTime(e.endTz,e.end)+" "+tzAbbr(e.endTz,e.end)+" \u00b7 "+hm(e.end-now)+" left"
-    : "";
-}
-function renderNow(){
-  const now=Date.now();
-  $("#demo2").hidden=!(cfg.demo&&plan);
-  $("#nowLine").hidden=!plan;
-  if(!plan){
-    setNow("--c-free","\u2014","No trip yet","Add your flights under Trip and a shift plan is built from them.",null,null);
-    $("#nowNext").textContent=""; return;
-  }
-  const s=stateAt(plan,now);
-
-  if(now<plan.planStart){
-    const d=Math.ceil((plan.planStart-now)/DAY);
-    setNow("--c-free","Not started","Nothing to do",
-      "Your plan opens in "+d+" day"+(d===1?"":"s")+", "+plan.prep+
-      " days before departure. Until then keep your normal schedule \u2014 a steady baseline is what the plan shifts from.",null,null);
-  } else if(!s.primary){
-    setNow("--c-free","Open","Nothing to do",
-      "No light or sleep instruction is active. Eat, work, move around \u2014 just keep bright light out of the next window below.",null,null);
-  } else {
-    const e=s.primary;
-    const label=e.k==="flight"?"In the air":e.k==="sleep"?"Sleep":e.k==="nap"?"Nap now":e.k==="dark"?"Block light":e.k==="light2"?"Stay in the light":"Bright light";
-    setNow(COLOR[e.k],PHASE[e.k]||"Now",label,e.d,e,now);
-  }
-
-  const up=s.upcoming;
-  $("#nowNext").textContent=up?("next: "+up.h.toLowerCase()+" "+fmtTime(up.tz,up.start)+" \u00b7 in "+hm(up.start-now)):"";
-
-}
 
 function strategyHtml(){
   /* Spelled out as a running total, not separate facts, so the numbers
@@ -822,12 +745,13 @@ function strategyHtml(){
 
 function renderPlan(){
   const list=$("#planList"); list.innerHTML="";
+  $("#demo2").hidden=!(cfg.demo&&plan);
   if(!plan){
     list.innerHTML='<div class="empty"><h2>No plan yet</h2><p>Enter your flights under Trip and the day-by-day schedule appears here.</p></div>';
     $("#strategyCard").innerHTML="";
-    $("#icsCard").hidden=true; $("#legendCard").hidden=true; return;
+    $("#icsCard").hidden=true; return;
   }
-  $("#icsCard").hidden=false; $("#legendCard").hidden=false;
+  $("#icsCard").hidden=false;
   $("#strategyCard").innerHTML=strategyHtml();
   const now=Date.now();
   const groups=new Map();
@@ -1183,7 +1107,7 @@ function renderLegs(){
     if(del) del.addEventListener("click",()=>{ cfg.legs.splice(i,1); renderLegs(); });
     resolveLegTz(i,row);
   });
-  tripEffect();
+  refreshValidity();
 }
 /* The commonest way to ruin a plan is to leave the arrival on the departure
    date. Show the air time under every leg so a wrong date is obvious, and
@@ -1308,35 +1232,13 @@ function refreshValidity(){
   if(m&&!m.hidden&&!tripIssues().length) m.hidden=true;
 }
 
-function tripEffect(){
-  /* Note: no readLegs() here. The live listeners keep cfg current, and calling
-     it during boot would read empty boxes and wipe a saved trip. The
-     authoritative read happens once, in cfgFromForm(), when Build is pressed. */
-  refreshValidity();
-  const el=$("#tripEffect");
-  el.textContent="";
-  try{
-    if(tripIssues().length) return;
-    const probe=Object.assign({},cfg,{
-      bed:parseTime($("#fBed").value)||cfg.bed,wake:parseTime($("#fWake").value)||cfg.wake});
-    const p=buildPlan(probe);
-    const gain=Math.max(0,p.flightShift-p.maxPre);
-    const after=Math.max(0,Math.ceil((p.total-Math.max(p.flightShift,p.maxPre))/p.rate));
-    el.textContent=r1(p.maxPre)+" h before you fly"+
-      (gain>0.05?" \u00b7 the flight adds "+r1(gain)+" h":"")+
-      " \u00b7 "+after+" night"+(after===1?"":"s")+" to finish after you land";
-
-  }catch(e){}
-}
-
 function formFromCfg(){
   $("#fBed").value=showTime(cfg.bed); $("#fWake").value=showTime(cfg.wake);
-  fillZoneSelect($("#fHomeTz"),cfg.homeTz);
-  renderLegs(); tripEffect();
+  renderLegs(); refreshValidity();
 }
 function cfgFromForm(){
   cfg.bed=parseTime($("#fBed").value)||""; cfg.wake=parseTime($("#fWake").value)||"";
-  cfg.homeTz=$("#fHomeTz").value; cfg.caf=true;
+  cfg.caf=true;
   Object.assign(cfg,FIXED);
   readLegs();
 }
@@ -1349,7 +1251,7 @@ function rebuild(){
     const ok=cfg.legs.length&&!tripIssues().length;
     plan=ok?buildPlan(cfg):null;
   }catch(err){ plan=null; console.error(err); }
-  renderNow(); renderPlan();
+  renderPlan();
   $("#imgCard").hidden=!plan;
   if(plan){ $("#icsText").value=buildIcs(); buildPlanImage(); }
 }
@@ -1362,8 +1264,8 @@ function go(p){
   document.querySelector("main").scrollTop=0;
 }
 $$("nav button").forEach(b=>b.addEventListener("click",()=>go(b.dataset.p)));
-$("#fBed").addEventListener("input",tripEffect);
-$("#fWake").addEventListener("input",tripEffect);
+$("#fBed").addEventListener("input",refreshValidity);
+$("#fWake").addEventListener("input",refreshValidity);
 $("#addLeg").addEventListener("click",()=>{
   const last=cfg.legs[cfg.legs.length-1]||{};
   cfg.legs.push({from:last.to||"",to:"",fromTz:last.toTz||"",toTz:"",dep:"",arr:""});
@@ -1390,7 +1292,6 @@ $("#build").addEventListener("click",()=>{
 });
 $("#reset").addEventListener("click",()=>{
   cfg=JSON.parse(JSON.stringify(EMPTY));
-  cfg.homeTz=Intl.DateTimeFormat().resolvedOptions().timeZone;
   try{ localStorage.removeItem("circshift"); }catch(e){}
   $("#buildMsg").hidden=true;
   formFromCfg(); rebuild(); go("trip");
@@ -1456,13 +1357,11 @@ $("#loadDemo").addEventListener("click",()=>{
 });
 
 cfg=load();
-if(!cfg.homeTz) cfg.homeTz=Intl.DateTimeFormat().resolvedOptions().timeZone;
 formFromCfg();
 rebuild();
 go(fresh||!plan?"trip":"plan");
 let lastMin=-1;
 setInterval(()=>{
-  renderNow();
   const m=Math.floor(Date.now()/MIN);
   if(m!==lastMin){ lastMin=m; if(pane==="plan") renderPlan(); }
 },1000);

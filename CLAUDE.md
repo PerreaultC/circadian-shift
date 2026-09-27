@@ -47,7 +47,30 @@ starts landing *before* CBTmin, where it delays instead.
   departure is their call, not the page's — there used to be a `cfg.floor`
   cap on this and it was removed deliberately. The only cap left is the
   calendar: extra prep days buy smaller nightly steps, not a bigger total
-  shift (`maxPre = min(total, prep * rate)`).
+  shift.
+- **Prep nights ramp, they don't jump straight to the max rate.** A flat
+  `rate` every night (the original design) reaches further in the same
+  `prep` nights, but with no ramp-in at all — night one, furthest from
+  departure and least urgent, got exactly the same size step as the
+  night right before flying. Real-world comparison against Timeshifter
+  (2026-09-27, PHX→LHR, 22:00/06:00) showed it pacing far more gently at
+  first: our engine had night one blocking light at 18:30, four days out,
+  where Timeshifter was still near baseline. `preRamp(n)` now gives the
+  *cumulative* shift after `n` prep nights as a triangular-number
+  progression — `(rate/prep) * n * (n+1) / 2` — so the step size itself
+  grows linearly night over night and only the *last* prep night lands on
+  the safety-max `rate`; `maxPre` (the total achieved before departure)
+  is `preRamp(prep)`, capped by `total`. Since a ramp can't also hit the
+  old flat-rate ceiling in the same number of nights, this reaches *less*
+  before departure than the old formula did (e.g. 3.75 h vs. 6 h over 4
+  nights at a 1.5 h/day advance) — the remainder shifts onto the flight
+  and the nights after landing. This was one comparison, not a
+  recalibration; see "Calibration" below.
+- **Home time zone is derived, not asked for.** `homeTz` in `buildPlan` is
+  `legs[0].fromTz` — wherever the earliest-departing leg leaves from —
+  computed after `legs` is sorted by departure time. There is no home-zone
+  field in the Trip form any more; the departure airport already answers
+  the question, and asking twice invited the two to disagree.
 - **Sleep the flight, but only if it lands you in the morning.** A long leg
   arriving 03:00–12:00 local is slept end to end (take-off + 20 min to landing
   − 2 h) and yields most of the shift. A westbound leg landing in the evening
@@ -85,8 +108,14 @@ them; several were arrived at by reversing an earlier choice.
 - **The page is a generator, not a travel companion.** You build the plan once
   before the trip, export it, and close the tab. During the trip you live off
   calendar alerts. A web page cannot wake you at 04:00, and one you must
-  remember to open is no use at 04:00 either. A compact "now" line survives at
-  the top of Plan as a convenience, not as the mechanism.
+  remember to open is no use at 04:00 either. The live "now" line (`renderNow`,
+  `stateAt`, the per-second `setInterval`) that used to sit at the top of Plan
+  as a convenience is gone entirely now — not even a convenience earns a
+  place if the page's whole premise is that you won't have it open. The
+  day-by-day list still dims past events and marks the live one
+  (`.ev.past`/`.ev.live`) for the times you do happen to have it open, which
+  is enough of a nod to "now" without a whole line of the page and a running
+  timer maintaining it.
 - **Minimal, to a fault — but the owner's document style, not an app's.**
   Black on white, hairline rules, no cards, no shadows, no rounded corners.
   Prose was cut hard, twice now; prefer deleting a sentence to adding one.
@@ -102,14 +131,18 @@ them; several were arrived at by reversing an earlier choice.
   grid, so its canvas text asks for `ui-monospace, monospace` — whatever
   the system provides, not a specific loaded one.
 - **One page, not three.** Plan and Export used to be separate tabs; Export
-  is gone and its cards (calendar download, the picture, the legend) now
-  render inside Plan, in this order: now-line, **Strategy**, **Calendar
-  export**, the day-by-day list, the picture, the legend. Pressing Build
-  lands there directly. Nav is just `trip` / `plan` now. The "One more
-  step" nudge card that used to point at the separate Export tab is gone
-  too — with the calendar-export card always inline, a second card asking
-  the reader to go export their calendar read as two competing prompts
-  for the same action.
+  is gone and its cards now render inside Plan, in this order: the demo
+  banner, **Strategy**, **Calendar export**, the picture, then the
+  day-by-day list. Pressing Build lands there directly. Nav is just
+  `trip` / `plan` now. The "One more step" nudge card that used to point at
+  the separate Export tab is gone too — with the calendar-export card
+  always inline, a second card asking the reader to go export their
+  calendar read as two competing prompts for the same action.
+- **No separate legend.** It used to be its own card, below everything
+  else, translating color dots back into event names. The picture now
+  draws its own legend directly into the image (see "Solid color bars,
+  not ASCII" below), so a second, separate legend for the same colors
+  was explaining something already explained.
 - **Times and a heading, not a paragraph, per event.** The day-by-day list
   used to carry a description under every event heading ("Get outside.
   Indoors, a 10,000 lux box."). Dropped from the on-screen row — the
@@ -118,18 +151,17 @@ them; several were arrived at by reversing an earlier choice.
   (`buildIcs`); the calendar notification is the one place that text still
   earns its keep, read at a glance with no page open at all.
 - **No settings that do not earn their place.** A standard/aggressive toggle,
-  melatonin dose and timing dropdowns, a prep-days slider, and an "earliest
-  you'll wake" livability floor were all built and then removed. What
-  survives: sleep hours, home zone, the flights. Everything else is fixed in
-  `FIXED` / `DEF_LEAD`. Explanatory prose that didn't earn its place either:
-  the front-page pitch line, the iOS install note, the medical disclaimer,
-  and the "starts 4 days before departure" filler are all gone too — the
-  owner's own call, not a safety-review conclusion, so restore the
-  disclaimer without hesitation if this ever leaves personal use.
-- **Show consequences, not just controls.** Where a setting is kept, the form
-  states what it does with the current trip ("2 h before you fly, the flight
-  adds 3.5 h, 2 nights to finish after you land") rather than leaving the user
-  to infer it.
+  melatonin dose and timing dropdowns, a prep-days slider, an "earliest
+  you'll wake" livability floor, and (most recently) an explicit home-time-zone
+  field were all built and then removed. What survives: sleep hours, the
+  flights. Everything else is fixed in `FIXED` / `DEF_LEAD`, or, for home
+  time zone, derived from the flights themselves. Explanatory prose that
+  didn't earn its place either: the front-page pitch line, the iOS install
+  note, the medical disclaimer, the "starts 4 days before departure" filler,
+  and the live "X h before you fly ... Y nights to finish after you land"
+  preview under the sleep-hours fields are all gone too. The disclaimer's
+  removal is the owner's own call, not a safety-review conclusion, so
+  restore it without hesitation if this ever leaves personal use.
 - **Solid color bars, not ASCII.** This reverses the original "Pure ASCII
   output" choice: the picture used to render the literal character grid
   (`planAscii`, one `S`/`*`/`#`/`~`/`m` per hour) as monospace text, which
@@ -156,11 +188,21 @@ them; several were arrived at by reversing an earlier choice.
 
 ## Calibration
 
-Validated against real Timeshifter plans for PHX↔LHR. On Timeshifter's own
-inputs (23:00–07:00) the flight night matches exactly and every other night is
-within 15 min; both plans end on the same calendar day in both directions.
-Full tables in `README.md`; the raw screenshot
-transcriptions and the derivation are in `calibration.md`.
+**Stale as of the prep-night ramp (see "Rules that are not obvious"
+above).** The validated numbers below — flight night exact, every other
+night within 15 min — were measured against the old flat-rate prep
+formula. The ramp changes every pre-flight night's timing by design (that
+was the point), so the pre-flight nights in `calibration.md` and the
+tables in `README.md` no longer match current output; the flight night
+and everything from landing onward should be unaffected, since neither
+was touched. Needs a fresh comparison run before that "validated" claim
+is reinstated for the pre-flight portion.
+
+Originally validated against real Timeshifter plans for PHX↔LHR. On
+Timeshifter's own inputs (23:00–07:00) the flight night matched exactly
+and every other night was within 15 min; both plans ended on the same
+calendar day in both directions. Full tables in `README.md`; the raw
+screenshot transcriptions and the derivation are in `calibration.md`.
 
 ## Testing
 

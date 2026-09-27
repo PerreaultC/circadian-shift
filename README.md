@@ -50,6 +50,13 @@ block is worth about 4 hours, more than any three days on the ground.
 
 ## Calibration
 
+**Nights 1–2 in both tables below are stale.** The prep-night pacing
+changed from a flat rate to a ramp after these tables were measured (see
+`CLAUDE.md`), so nights 1–2 in each direction no longer match current
+output — the ramp starts gentler and builds up, by design. The flight/travel
+night and everything after weren't touched and should still hold. Needs a
+fresh set of tables.
+
 The pacing, the livability brake and the sleep-the-flight rule were
 calibrated against a real Timeshifter plan for PHX→LHR (AA194, departing
 16:10, arriving 10:30 the next morning; 8 hours to advance). Running this

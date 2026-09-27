@@ -1,5 +1,11 @@
 # Calibration against Timeshifter
 
+**Stale for the pre-flight nights.** The engine's prep-night pacing changed
+from a flat rate to a ramp after this file was written (see `CLAUDE.md`,
+"Rules that are not obvious"); the pre-flight numbers below reflect the old
+flat-rate formula, not current output. The flight night and everything
+from landing onward weren't touched by that change and should still hold.
+
 The engine's pacing, its livability brake and its sleep-the-flight rule were
 derived from two real Timeshifter plans, read off screenshots of the app. This
 file holds the **raw readings**, so the derivation can be checked or redone —
