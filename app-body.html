@@ -766,14 +766,13 @@ const DEF_LEAD=5;   // out of bed this many hours before take-off: time at
 const FIXED={prep:3,pace:"aggressive",mel:true,longWay:true,caf:true,lead:DEF_LEAD};
 const EMPTY=Object.assign({bed:"22:00",wake:"06:00",lead:DEF_LEAD,
   legs:[{from:"",to:"",fromTz:"",toTz:"",dep:"",arr:""}]},FIXED);
-let cfg=null, plan=null, fresh=false;
+let cfg=null, plan=null;
 
 function load(){
   try{
     const s=localStorage.getItem("circshift");
     if(s) return Object.assign(JSON.parse(JSON.stringify(EMPTY)),JSON.parse(s),FIXED);
   }catch(e){}
-  fresh=true;
   return JSON.parse(JSON.stringify(EMPTY));
 }
 function save(){ try{ localStorage.setItem("circshift",JSON.stringify(cfg)); }catch(e){} }
@@ -1418,7 +1417,7 @@ $("#imgDl").addEventListener("click",async()=>{
 cfg=load();
 formFromCfg();
 rebuild();
-go(fresh||!plan?"trip":"plan");
+go("trip");
 let lastMin=-1;
 setInterval(()=>{
   const m=Math.floor(Date.now()/MIN);

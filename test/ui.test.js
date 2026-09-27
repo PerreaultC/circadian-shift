@@ -84,7 +84,7 @@ test('Reset clears a stale error', () => {
   assert.equal(msg(app.$), null, 'error survived Reset');
 });
 
-test('a saved trip opens on Plan; a fresh visitor opens on Trip', () => {
+test('every visitor lands on Trip, saved plan or not', () => {
   const saved = JSON.stringify({
     homeTz: 'America/Phoenix', bed: '22:00', wake: '06:00',
     legs: PHX_LHR
@@ -92,7 +92,8 @@ test('a saved trip opens on Plan; a fresh visitor opens on Trip', () => {
   const fresh = loadApp(['plan'], {});
   assert.ok(fresh.$('#pane-trip').classList.contains('on'), 'fresh visitor not on Trip');
   const back = loadApp(['plan'], { circshift: saved });
-  assert.ok(back.$('#pane-plan').classList.contains('on'), 'returning visitor not on Plan');
+  assert.ok(back.$('#pane-trip').classList.contains('on'), 'returning visitor not on Trip');
+  assert.ok(back.plan, 'returning visitor lost their saved plan');
 });
 
 test('the strategy line never claims a negative amount of shift', () => {
