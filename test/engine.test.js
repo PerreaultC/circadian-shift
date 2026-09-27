@@ -127,7 +127,7 @@ test('a flight landing in the morning is slept end to end', () => {
 test('melatonin is eastbound only', () => {
   const east = mk('America/Phoenix', TRIPS['PHX->LHR eastbound'][1]);
   const west = mk('Europe/London', TRIPS['LHR->PHX westbound'][1]);
-  const dose = p => p.ev.filter(e => e.k === 'mel' && e.h.indexOf('Melatonin 1') === 0).length;
+  const dose = p => p.ev.filter(e => e.k === 'mel' && e.h.indexOf('Melatonin 0.5') === 0).length;
   assert.ok(dose(east) > 0, 'no melatonin flying east');
   assert.equal(dose(west), 0, 'melatonin scheduled flying west');
 });

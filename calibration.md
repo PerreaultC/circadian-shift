@@ -1,22 +1,25 @@
-# Calibration against Timeshifter
+# Calibration against a commercial jet-lag app
 
-**Stale for the pre-flight nights.** The engine's prep-night pacing changed
-from a flat rate to a ramp after this file was written (see `CLAUDE.md`,
-"Rules that are not obvious"); the pre-flight numbers below reflect the old
-flat-rate formula, not current output. The flight night and everything
-from landing onward weren't touched by that change and should still hold.
+**Stale for the pre-flight nights.** The engine's prep-night pacing has
+changed twice since this file was written — briefly to a ramp, then to a
+flat rate at 2/3 of the safety cap, with `prep` dropped from 4 nights to 3
+(see `CLAUDE.md`, "Rules that are not obvious") — so the pre-flight numbers
+below reflect none of the current designs. The flight night and everything
+from landing onward weren't touched by any of that and should still hold.
 
 The engine's pacing, its livability brake and its sleep-the-flight rule were
-derived from two real Timeshifter plans, read off screenshots of the app. This
-file holds the **raw readings**, so the derivation can be checked or redone —
-the summary tables in `README.md` are conclusions drawn from what is below.
+derived from two real plans from a commercial jet-lag app, read off
+screenshots. This file holds the **raw readings**, so the derivation can be
+checked or redone — the summary tables in `README.md` are conclusions drawn
+from what is below.
 
-Trip: **PHX ↔ LHR, October 2026, AA194 out.** The Timeshifter profile appears
-to have been set to a 23:00–07:00 sleeper (its plan starts at "Phoenix 7am"
-and finishes at a 07:00 wake), *not* the 22:00–06:00 the app now defaults to.
-Comparisons must use 23:00–07:00 or everything shifts by an hour.
+Trip: **PHX ↔ LHR, October 2026, AA194 out.** The commercial app's profile
+appears to have been set to a 23:00–07:00 sleeper (its plan starts at
+"Phoenix 7am" and finishes at a 07:00 wake), *not* the 22:00–06:00 the app
+now defaults to. Comparisons must use 23:00–07:00 or everything shifts by
+an hour.
 
-## How to read a Timeshifter screenshot
+## How to read one of its screenshots
 
 Decoded from the two plans; useful if more are ever captured.
 
@@ -111,8 +114,9 @@ Sat 17  "Done!"
 westbound is **not** a mirror of eastbound.
 
 1. The flight is **not** slept through. It lands at 19:05; sleeping it would
-   leave you rested at dinner time and wide awake at 03:00. Timeshifter gives a
-   short sleep at departure plus one nap over the body's night instead.
+   leave you rested at dinner time and wide awake at 03:00. The commercial
+   app gives a short sleep at departure plus one nap over the body's night
+   instead.
 2. The **landing night** does almost all the work (+5.75 h). A travel day
    stretched by the whole time difference generates enough sleep pressure to
    carry you to local bedtime.
@@ -123,13 +127,13 @@ westbound is **not** a mirror of eastbound.
 
 ## Agreement after calibration
 
-Running this engine on Timeshifter's own inputs (23:00–07:00): the flight
+Running this engine on that app's own inputs (23:00–07:00): the flight
 night matches **exactly** in both directions, every other night is within
 15–45 min, and both plans finish on the same calendar day. See `README.md`.
 
 ## Redoing this
 
-Capture the Timeshifter timeline as overlapping screenshots top to bottom,
+Capture that app's timeline as overlapping screenshots top to bottom,
 transcribe to the block format above, then convert wake times to CBTmin in UTC
 (`wake − 2 h − zone offset`) and difference against baseline. Divergence in the
 *nightly steps* points at the rate or the livability cap; divergence on the

@@ -62,6 +62,9 @@ main{flex:1;overflow-y:auto;overflow-x:hidden;
   font-size:19px;font-weight:600;color:var(--text);
 }
 .card > .sub,.sub{margin:0 0 12px;font-family:var(--sans);font-size:15px;color:var(--dim);line-height:1.55}
+.card > ol{margin:0 0 12px;padding-left:22px;font-family:var(--sans);font-size:15px;color:var(--dim);line-height:1.55}
+.card > ol li{margin-bottom:10px}
+.card > ol li:last-child{margin-bottom:0}
 .foot{font-family:var(--sans);font-size:14px;color:var(--faint);line-height:1.55;margin:14px 0 0}
 
 /* form */
@@ -75,6 +78,7 @@ input,select{
   font-family:var(--mono);font-size:16px;font-variant-numeric:tabular-nums;
 }
 input:focus,select:focus{outline:0;border-bottom-color:var(--text)}
+input[data-f="from"]::placeholder,input[data-f="to"]::placeholder{text-transform:none}
 input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--text);outline-offset:2px}
 select{font-size:15px}
 input[type=checkbox]{width:auto;accent-color:var(--text)}
@@ -144,7 +148,6 @@ textarea{
 .empty{padding:44px 0;color:var(--faint)}
 .empty h2{font-size:17px;color:var(--text);margin:0 0 6px;font-weight:600}
 .empty p{font-family:var(--sans);font-size:15px;margin:0;line-height:1.5}
-.demobar{font-family:var(--sans);font-size:14px;color:var(--faint);padding:12px 0 0}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 
@@ -157,13 +160,11 @@ textarea{
   <main>
     <!-- ============ PLAN + EXPORT, one page ============ -->
     <section class="pane" id="pane-plan">
-      <div class="demobar" id="demo2" hidden>Loaded with the Phoenix&ndash;London trip. Change it, or start your own, under Trip.</div>
       <div id="strategyCard"></div>
       <div class="card" id="icsCard" hidden>
         <h2>Calendar export</h2>
         <div class="actions">
           <button class="primary" id="icsDl">Download .ics</button>
-          <button id="icsShow">Show text</button>
         </div>
         <div id="icsBox" hidden>
           <label for="icsText">Copy into a file named shift.ics</label>
@@ -172,19 +173,58 @@ textarea{
         </div>
       </div>
       <div class="card" id="imgCard" hidden>
-        <p class="sub">Save this picture to Photos for a one-glance overview of the week.</p>
+        <h2>Overview</h2>
+        <p class="sub">Just save this to your phone for a one-glance overview of the planner.</p>
         <div id="imgWrap"><img id="planImg" alt="Day-by-day chart of the shift plan" style="width:100%;display:block;border:1px solid var(--rule)"></div>
         <div class="actions">
           <button id="imgDl">Download the image</button>
         </div>
       </div>
-      <div id="planList"></div>
+      <div class="card" id="planList"></div>
     </section>
 
     <!-- ============ TRIP ============ -->
     <section class="pane" id="pane-trip">
       <div class="card">
-        <h2>Your usual sleep</h2>
+        <h2>Circadian Shift</h2>
+        <p class="sub">Academics often travel across time zones to give a
+          talk or participate in a workshop, and we rarely have the luxury
+          of arriving several days early to adjust. I built this planner to
+          shift my own body clock before leaving, so I land close to local
+          time. It implements protocols from the scientific literature (see
+          below).</p>
+        <p class="sub">I use it on the way out. I usually don't on the way
+          back: at home I am resuming my normal routine, and the jet lag is
+          easier to absorb.</p>
+        <p class="sub">The key is timed light exposure, and you have to be
+          consistent about it. Deviate from the plan and it will not work
+          well.</p>
+        <p class="sub">Some tips:</p>
+        <ol>
+          <li>&ldquo;Block light&rdquo; does not mean sleep. Get into a dark
+            room or put on an eye mask and listen to an audiobook. If you
+            can&rsquo;t &mdash; maybe you&rsquo;re at the airport &mdash;
+            wear sunglasses and close your eyes when you can. If you are
+            driving, do not wear an eye mask and do not close your
+            eyes.</li>
+          <li>The way to use this app is to export the plan to your
+            calendar. Every instruction becomes a timed alert that accounts
+            for the change in time zone, so the plan keeps working while you
+            travel and through your first days at the destination. There is
+            also an overview image you can save to your photos. It is
+            useful for seeing the shape of the plan, but the calendar is how
+            you should follow it.</li>
+          <li>The melatonin timing here assumes a 0.5 mg dose. A higher dose
+            needs earlier timing, and can cost you sleep quality that
+            night.</li>
+        </ol>
+        <p class="sub" style="margin:0">Note that everything you enter
+          here, and your plan, stays in your browser. Nothing is sent
+          anywhere.</p>
+      </div>
+
+      <div class="card">
+        <h2>What is your usual sleep schedule?</h2>
         <div class="row">
           <div><label for="fBed">Bedtime <em>&mdash; hh:mm pm</em></label><input type="text" id="fBed" value="10:00 pm" autocomplete="off"></div>
           <div><label for="fWake">Wake <em>&mdash; hh:mm am</em></label><input type="text" id="fWake" value="6:00 am" autocomplete="off"></div>
@@ -198,7 +238,6 @@ textarea{
 
         <div style="display:flex;gap:10px;flex-wrap:wrap">
           <button id="addLeg" class="ghost">+ Add connecting flight</button>
-          <button id="loadDemo" class="ghost">Load an example</button>
         </div>
       </div>
 
@@ -207,6 +246,25 @@ textarea{
         <button class="ghost" id="reset">Reset</button>
       </div>
       <div class="warn" id="buildMsg" hidden></div>
+      <p class="foot">Sources.<br>
+        Burgess HJ. Using Bright Light and Melatonin to Reduce Jet Lag. In:
+        Sateia MJ, Buysse DJ, eds. Behavioral Treatments for Sleep
+        Disorders. 2011, Ch. 16.<br>
+        Eastman CI, Gazda CJ, Burgess HJ, Crowley SJ, Fogg LF. Advancing
+        circadian rhythms before eastward flight: a strategy to prevent or
+        reduce jet lag. Sleep 2005;28(1):33-44.<br>
+        Revell VL, Eastman CI. How to trick mother nature into letting you
+        fly around or stay up all night. J Biol Rhythms 2005;20(4):353-65.<br>
+        Khalsa SBS, Jewett ME, Cajochen C, Czeisler CA. A phase response
+        curve to single bright light pulses in human subjects. J Physiol
+        2003;549(3):945-52.<br>
+        Revell VL, Burgess HJ, Gazda CJ, Smith MR, Fogg LF, Eastman CI.
+        Advancing human circadian rhythms with afternoon melatonin and
+        morning intermittent bright light. J Clin Endocrinol Metab
+        2006;91(1):54-9.<br>
+        Burgess HJ, Revell VL, Molina TA, Eastman CI. Human phase response
+        curves to three days of daily melatonin: 0.5 mg versus 3.0 mg. J
+        Clin Endocrinol Metab 2010;95(7):3325-31.</p>
     </section>
   </main>
 
@@ -351,7 +409,6 @@ function zonedToTs(tz,y,mo,d,h,mi){          // wall time in tz -> epoch ms
   return ts;
 }
 const fmtTime=(tz,ts)=>new Intl.DateTimeFormat("en-GB",{timeZone:tz,hour:"2-digit",minute:"2-digit",hour12:false}).format(new Date(ts));
-const fmtDate=(tz,ts)=>new Intl.DateTimeFormat("en-GB",{timeZone:tz,weekday:"short",day:"numeric",month:"short"}).format(new Date(ts));
 const fmtDay =(tz,ts)=>new Intl.DateTimeFormat("en-GB",{timeZone:tz,weekday:"long",day:"numeric",month:"long"}).format(new Date(ts));
 const fmtWhen=(tz,ts)=>new Intl.DateTimeFormat("en-GB",{timeZone:tz,weekday:"short",day:"numeric",
   month:"short",hour:"numeric",minute:"2-digit",hour12:true}).format(new Date(ts));
@@ -382,7 +439,7 @@ const r1=n=>Math.round(n*10)/10;
    Sleep is placed so waking lands at CBTmin + 2 h, which puts every
    waking hour of morning light on the advancing side of the curve.
    ============================================================ */
-const RATES={standard:{adv:1.0,del:2.0},aggressive:{adv:1.5,del:2.5}};
+const RATES={standard:{adv:1.0,del:1.5},aggressive:{adv:1.5,del:2.0}};
 
 function buildPlan(c){
   const [bh,bm]=c.bed.split(":").map(Number), [wh,wm]=c.wake.split(":").map(Number);
@@ -410,33 +467,34 @@ function buildPlan(c){
   if(c.longWay && raw!==0 && cost(round)<cost(direct)-0.5){ pick=round; longWay=true; }
   const dir=pick.dir, total=pick.amt, rate=dir==="advance"?R.adv:R.del, sgn=dir==="advance"?-1:1;
 
-  /* How far the schedule can move before departure is the user's call, not
-     this page's \u2014 no cap on how early they're willing to wake. Only the
-     calendar limits it: four nights cannot buy more than four steps.
-
-     Ramped, not flat: the first prep night is a gentle nudge, each night
-     after grows by a fixed increment, and only the last night before
-     departure lands on the safety-max rate \u2014 the rate cap says "never
-     more than this in one night," not "every night must hit it starting
-     on the first one." A flat rate from night one would reach further in
-     the same number of nights, but with no ramp-in at all; this reaches
-     less before departure by design by leaning harder on the flight and
-     the nights after landing to make up the rest. */
+  /* Burgess, "Using Bright Light and Melatonin to Reduce Jet Lag" (2011,
+     Ch. 16 \u2014 the source already cited on the Trip page): "shift your
+     habitual bed and wake times 1 hour earlier per day" before an eastward
+     flight, over a 3-day preflight shift (her Figure 16.2), and "1 hour
+     later per day" before a westward one. Flat from night one, not a ramp
+     and not a baseline-then-shift night \u2014 two things this file tried and
+     walked back (see "Calibration"). Eastman et al. 2005 (Sleep 28(1):33-44,
+     the study behind that recommendation) directly tested 1 h/day against
+     2 h/day and found the faster pace bought a slightly bigger shift at the
+     cost of misaligning sleep; 1 h/day is the one that made it into the
+     book chapter. `rate` (1.5 h/day advance, 2 h/day delay) is the outer
+     safety ceiling for later nights, not the prep pace. */
   const preDays=total>0.05?c.prep:0;
-  const preRamp=n=>preDays?(rate/preDays)*n*(n+1)/2:0;   // cumulative shift after n prep nights
-  let maxPre=preDays?Math.min(total,preRamp(preDays)):0;
+  const prepRate=1;
+  const prepCum=n=>preDays?prepRate*n:0;   // cumulative shift after n prep nights
+  let maxPre=preDays?Math.min(total,prepCum(preDays)):0;
 
   /* Cycle i's UNSHIFTED clock low point. Cycle 0 is the first shifted
      night; cycle -1 contributes the daytime that leads into it. */
   const anchor=departTs-preDays*DAY;
   const ap=localParts(homeTz,anchor);
-  let U0=zonedToTs(homeTz,ap.y,ap.mo,ap.d,wh,wm)-2*HOUR;
+  let U0=zonedToTs(homeTz,ap.y,ap.mo,ap.d,wh,wm)-3*HOUR;
   if(U0<anchor){
     const q=localParts(homeTz,U0+DAY+6*HOUR);
-    U0=zonedToTs(homeTz,q.y,q.mo,q.d,wh,wm)-2*HOUR;
+    U0=zonedToTs(homeTz,q.y,q.mo,q.d,wh,wm)-3*HOUR;
   }
   const U=i=>U0+i*DAY;
-  const planStart=U(-1)+2*HOUR;           // the first morning you act on
+  const planStart=U(-1)+3*HOUR;           // the first morning you act on
 
   /* --- The flight is the single biggest shift on offer: a long dark
      block you will spend sitting still anyway. Sleep it end to end,
@@ -448,7 +506,7 @@ function buildPlan(c){
     const wEnd=bigLeg.arrTs-2*HOUR;
     const wStart=Math.max(bigLeg.depTs+20*MIN,wEnd-sleepMin*MIN);
     if(wEnd-wStart>=4*HOUR){
-      const cbt=wEnd-2*HOUR;
+      const cbt=wEnd-3*HOUR;
       const landHour=localParts(destTz,wEnd).h+localParts(destTz,wEnd).mi/60;
       if(landHour>=3&&landHour<12) for(let i=0;i<40;i++){
         const s=(U(i)-cbt)/HOUR*(dir==="advance"?1:-1);
@@ -480,18 +538,18 @@ function buildPlan(c){
     let shift,bed,wake,cbt,onPlane=false;
     if(i===flightIdx){
       shift=Math.max(prev,Math.min(flightShift,total));
-      bed=flightBed; wake=flightWake; cbt=wake-2*HOUR; onPlane=true;
+      bed=flightBed; wake=flightWake; cbt=wake-3*HOUR; onPlane=true;
     }else{
       if(i<0) shift=0;
-      else if(U(i)<departTs) shift=Math.min(preRamp(i+1),maxPre,total);
+      else if(U(i)<departTs) shift=Math.min(prepCum(i+1),maxPre,total);
       else if(dir==="delay"&&landBed&&!landed){
-        shift=(landBed+sleepMin*MIN-2*HOUR-U(i))/HOUR;
+        shift=(landBed+sleepMin*MIN-3*HOUR-U(i))/HOUR;
         landed=true;
       }
       else shift=Math.min(prev+rate,total);
       shift=Math.max(Math.min(shift,total),prev);
       cbt=U(i)+sgn*shift*HOUR;
-      wake=cbt+2*HOUR; bed=wake-sleepMin*MIN;
+      wake=cbt+3*HOUR; bed=wake-sleepMin*MIN;
     }
     if(i>=0) prev=shift;
     cyc.push({i,shift,bed,wake,cbt,onPlane});
@@ -569,11 +627,11 @@ function buildPlan(c){
         h:"Keep the lights low",
         d:"Up before your clock's low point. Light now would push it the wrong way \u2014 wait until "+fmtTime(zoneAt(cbt),cbt)+".",
         note:"Airport and cabin lighting too. Sunglasses if you have to."});
-      add({k:"light",start:lightFrom,end:lightFrom+3*HOUR,cbt,shift,i,
+      add({k:"light",start:lightFrom,end:lightFrom+4*HOUR,cbt,shift,i,
         h:"Bright light",
         d:"Get outside. Indoors, a 10,000 lux box.",
-        note: overlapsFlight(lightFrom,lightFrom+3*HOUR)?"On board: shade up, screen bright.":null});
-      const t2a=lightFrom+3*HOUR, t2b=Math.min(lightFrom+10*HOUR,nextBed-2*HOUR);
+        note: overlapsFlight(lightFrom,lightFrom+4*HOUR)?"On board: shade up, screen bright.":null});
+      const t2a=lightFrom+4*HOUR, t2b=Math.min(lightFrom+10*HOUR,nextBed-2*HOUR);
       if(t2b>t2a+30*MIN) add({k:"light2",start:t2a,end:t2b,cbt,shift,i,
         h:"Stay in the light",
         d:"Keep the day bright.",note:null});
@@ -587,40 +645,53 @@ function buildPlan(c){
         h:"Bright light",
         d:"Bright light, stopping 90 min before bed.",
         note: overlapsFlight(nextBed-5.5*HOUR,nextBed-1.5*HOUR)?"On board: shade up, screens bright.":null});
-      /* Capped at the start of the afternoon light window, same as the
-         advance branch caps its own post-wake tail at nextBed-2h: on a
-         short arrival day (the flight-sleep cycle, landing close to the
-         next bedtime) an uncapped 3 h block-light window can run past the
-         point where the schedule already wants bright light instead. */
-      const darkFrom=(C.forced&&cbt>wake)?cbt:wake, darkTo=Math.min(darkFrom+3*HOUR,t2a);
+      /* Burgess Ch. 16: avoid light in the 4 hours AFTER Tmin, i.e. up to
+         cbt+4*HOUR \u2014 not darkFrom+4*HOUR. Since cbt = wake-3*HOUR, most
+         of that window is already covered by sleep; the actionable part
+         once actually awake is only the last hour of it (cbt+4h = wake+1h
+         in the normal case), not a fresh 4 hours from wake. Also capped at
+         the start of the afternoon light window (t2a), same as the advance
+         branch caps its own post-wake tail at nextBed-2h: on a short
+         arrival day (the flight-sleep cycle, landing close to the next
+         bedtime) an uncapped window can run past the point where the
+         schedule already wants bright light instead. */
+      const darkFrom=(C.forced&&cbt>wake)?cbt:wake, darkTo=Math.min(cbt+4*HOUR,t2a);
       if(i>=0&&darkTo>darkFrom+30*MIN) add({k:"dark",start:darkFrom,end:darkTo,cbt,shift,i,
         h:"Block light",
         d:"Sunglasses on outdoors."+(darkFrom>wake?" Before "+fmtTime(zoneAt(cbt),cbt)+", light is fine \u2014 it helps.":""),
         note: overlapsFlight(darkFrom,darkTo)?"On board: sunglasses, shade down.":null});
     }
 
-    if(c.mel>0&&dir==="advance"&&i>=0&&!settled&&!quiet){
-      const off=c.melT==="max"?5.5:2, t=bed-off*HOUR;
+    if(c.mel&&dir==="advance"&&i>=0&&!settled&&!quiet){
+      /* Revell, Burgess, Gazda, Smith, Fogg & Eastman, "Advancing human
+         circadian rhythms with afternoon melatonin and morning intermittent
+         bright light" (J Clin Endocrinol Metab 2006;91(1):54-9): 0.5 mg
+         given 5 h before baseline bedtime (advanced 1 h/day with the rest
+         of the schedule, same as cbt), which for a normal night's sleep is
+         cbt-10*HOUR \u2014 the exact figure Burgess's book chapter (2011,
+         Ch. 16) also cites this study for. The dose caveat (why not just
+         take more) is in the Trip page's tips, not repeated per event. */
+      const t=cbt-10*HOUR;
       add({k:"mel",start:t,end:t+15*MIN,cbt,shift,i,point:true,
-        h:"Melatonin 1\u20133 mg",
-        d:off+" h before tonight's bedtime.",
-        note: off===5.5?"Can make the afternoon heavy.":null});
+        h:"Melatonin 0.5 mg",
+        d:"10 h before your clock's low point.",
+        note:null});
     }
-    if(c.mel>0&&dir==="delay"&&i===0){
+    if(c.mel&&dir==="delay"&&i===0){
       add({k:"mel",start:wake,end:wake+15*MIN,cbt,shift,i,point:true,
         h:"Melatonin: skip it",
         d:"Not used flying west.",note:null});
     }
 
     /* Caffeine. Calibrated tighter than the usual 8-hours-before-bed rule:
-       roughly the first four waking hours only, which is what Timeshifter
-       prescribes \u2014 caffeine blunts the shift as well as the sleep. */
+       roughly the first four waking hours only \u2014 caffeine blunts the
+       shift as well as the sleep. */
     if(c.caf&&!quiet){
       const start=wake+1*HOUR;
       const cut=Math.min(wake+5*HOUR,nextBed-8*HOUR);
-      if(cut>start+30*MIN) add({k:"caf",start,end:cut,cbt,shift,i,cut,
-        h:"Caffeine window",
-        d:"Last coffee by {{T}}.",note:null});
+      if(cut>start+30*MIN) add({k:"caf",start:cut,end:cut,cbt,shift,i,point:true,
+        h:"Stop caffeine",
+        d:"No more caffeine after this.",note:null});
     }
 
     if(settled&&i>=0&&(!cyc[n-1]||cyc[n-1].shift<total-0.01)){
@@ -650,9 +721,29 @@ function buildPlan(c){
   }
   ev.sort((a,b)=>a.start-b.start||((a.point?1:0)-(b.point?1:0)));
 
+  /* Practical, not precise to the minute: every recommendation rounds to
+     the nearest half hour \u2014 a phase response curve has no minute-level
+     precision to defend anyway. The flight itself is a real, ticketed time
+     and is never rounded. A sleep block's end is the one exception to
+     "nearest": it rounds down instead, on the rare night where nearest
+     would push it later than the deadline that keeps the "never asleep
+     within the airport window" guarantee true. */
+  const HALF_HOUR=30*MIN;
+  const roundNear=ts=>Math.round(ts/HALF_HOUR)*HALF_HOUR;
+  const roundDown=ts=>Math.floor(ts/HALF_HOUR)*HALF_HOUR;
   for(const e of ev){
     e.tz=zoneAt(e.start);
     e.endTz=(e.end-e.start<=4*HOUR)?e.tz:zoneAt(e.end);
+    if(e.k!=="flight"){
+      const pointDur=e.end-e.start;
+      e.start=roundNear(e.start);
+      if(e.point) e.end=e.start+pointDur;
+      else if(e.k==="sleep"){
+        const en=roundNear(e.end);
+        e.end=(en>forcedWake&&e.end<=forcedWake)?roundDown(e.end):en;
+      }else e.end=roundNear(e.end);
+      if(e.cut) e.cut=roundNear(e.cut);
+    }
     if(e.cut) e.d=e.d.replace("{{T}}",fmtTime(e.tz,e.cut));
   }
 
@@ -670,18 +761,9 @@ const COLOR={sleep:"--c-sleep",nap:"--c-nap",dark:"--c-dark",light:"--c-light",l
 /* ============================================================
    5. STATE
    ============================================================ */
-const DEMO={
-  bed:"22:00",wake:"06:00",caf:true,demo:true,
-  prep:4,pace:"aggressive",mel:3,melT:"max",longWay:true,
-  legs:[
-    {from:"PHX",to:"LHR",fromTz:"America/Phoenix",toTz:"Europe/London",dep:"2026-10-07T16:10",arr:"2026-10-08T10:30"}
-  ]
-};
-/* A first-time visitor gets an empty form, not somebody else's itinerary.
-   The example is one tap away for anyone who wants to see the shape of it. */
 const DEF_LEAD=5;   // out of bed this many hours before take-off: time at
                      // the airport plus getting there and getting ready
-const FIXED={prep:4,pace:"aggressive",mel:3,melT:"max",longWay:true,caf:true,lead:DEF_LEAD};
+const FIXED={prep:3,pace:"aggressive",mel:true,longWay:true,caf:true,lead:DEF_LEAD};
 const EMPTY=Object.assign({bed:"22:00",wake:"06:00",lead:DEF_LEAD,
   legs:[{from:"",to:"",fromTz:"",toTz:"",dep:"",arr:""}]},FIXED);
 let cfg=null, plan=null, fresh=false;
@@ -703,7 +785,7 @@ function save(){ try{ localStorage.setItem("circshift",JSON.stringify(cfg)); }ca
 function strategyHtml(){
   /* Spelled out as a running total, not separate facts, so the numbers
      visibly add up to the goal instead of leaving the reader to check. */
-  const bits=[(plan.dir==="advance"?"Advance":"Delay")+" your clock "+r1(plan.total)+
+  const bits=["You have to "+(plan.dir==="advance"?"advance":"delay")+" your clock "+r1(plan.total)+
     " h in total \u2014 in steps of up to "+plan.rate+" h/day."];
   if(plan.preDays) bits.push(r1(plan.maxPre)+" h of that happens over the "+plan.preDays+
     " night"+(plan.preDays===1?"":"s")+" before you fly, at home.");
@@ -724,7 +806,6 @@ function strategyHtml(){
 
 function renderPlan(){
   const list=$("#planList"); list.innerHTML="";
-  $("#demo2").hidden=!(cfg.demo&&plan);
   if(!plan){
     list.innerHTML='<div class="empty"><h2>No plan yet</h2><p>Enter your flights under Trip and the day-by-day schedule appears here.</p></div>';
     $("#strategyCard").innerHTML="";
@@ -732,6 +813,7 @@ function renderPlan(){
   }
   $("#icsCard").hidden=false;
   $("#strategyCard").innerHTML=strategyHtml();
+  list.innerHTML="<h2>Full breakdown</h2>";
   const now=Date.now();
   const groups=new Map();
   for(const e of plan.ev){
@@ -796,19 +878,22 @@ function renderPlan(){
 const icsStamp=ts=>new Date(ts).toISOString().replace(/[-:]/g,"").replace(/\.\d{3}/,"");
 const icsEsc=s=>String(s).replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\r?\n/g,"\\n");
 function fold(l){ const o=[]; while(l.length>73){ o.push(l.slice(0,73)); l=" "+l.slice(73);} o.push(l); return o.join("\r\n"); }
+/* One glyph per kind so a locked phone's notification banner (title only,
+   no color rail) is still tellable apart at a glance. */
+const ICS_EMOJI={flight:"\u2708 ",sleep:"\uD83D\uDCA4 ",nap:"\uD83D\uDCA4 ",
+  light:"\u2600 ",light2:"\u2600 ",dark:"\uD83C\uDF19 ",mel:"\uD83D\uDC8A ",caf:"\u2615 "};
 function buildIcs(){
   if(!plan) return "";
   const L=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Circadian Shift//EN","CALSCALE:GREGORIAN",
            "METHOD:PUBLISH","X-WR-CALNAME:Circadian Shift"];
   plan.ev.forEach((e,i)=>{
-    if(e.k==="caf") return;
     const end=e.point?e.start+15*MIN:e.end;
     L.push("BEGIN:VEVENT",
       "UID:cs-"+plan.departTs+"-"+i+"@circadianshift",
       "DTSTAMP:"+icsStamp(Date.now()),
       "DTSTART:"+icsStamp(e.start),
       "DTEND:"+icsStamp(end),
-      fold("SUMMARY:"+icsEsc((e.k==="flight"?"\u2708 ":"")+e.h)),
+      fold("SUMMARY:"+icsEsc((ICS_EMOJI[e.k]||"")+e.h)),
       fold("DESCRIPTION:"+icsEsc(e.d+(e.note?"\n\n"+e.note:""))),
       "BEGIN:VALARM","TRIGGER:-PT5M","ACTION:DISPLAY",
       fold("DESCRIPTION:"+icsEsc(e.h)),"END:VALARM","END:VEVENT");
@@ -952,9 +1037,14 @@ async function renderPlanImage(){
   const chartW=24*HOURW, W=PADX*2+LABW+chartW;
   const gx=f=>PADX+LABW+f*HOURW;
 
+  /* Only list a kind that this particular plan actually draws \u2014 e.g. no
+     "In-flight nap" swatch on a trip with no nap, no "Melatonin" swatch
+     flying west. */
+  const usedKinds=new Set();
+  rows.forEach(r=>{ r.bars.forEach(b=>usedKinds.add(b.kind)); r.points.forEach(p=>usedKinds.add(p.kind)); });
   const legendItems=[["Bright light","light"],["Stay in the light","light2"],
     ["Block light","dark"],["Sleep","sleep"],["In-flight nap","nap"],
-    ["Melatonin","mel"],["Flight","flight"]];
+    ["Melatonin","mel"],["Flight","flight"]].filter(([,kind])=>usedKinds.has(kind));
 
   /* One pass lays out every element \u2014 each op gets the y it will draw at
      \u2014 which gives the total height before any of it is drawn onto a
@@ -964,11 +1054,7 @@ async function renderPlanImage(){
 
   const L0=plan.legs[0], LN=plan.legs[plan.legs.length-1];
   put(26,(g,y)=>{ g.fillStyle="#222222"; g.font="600 20px "+FONT;
-    g.fillText(L0.from+" -> "+LN.to+"   "+(plan.dir==="advance"?"advance ":"delay ")+
-      r1(plan.total)+" h at "+plan.rate+" h/day",PADX,y); });
-  put(30,(g,y)=>{ g.fillStyle="#555555"; g.font="15px "+FONT;
-    g.fillText(fmtDate(rows[0].tz,rows[0].a+12*HOUR)+" - "+
-      fmtDate(rows[rows.length-1].tz,rows[rows.length-1].a+12*HOUR),PADX,y); });
+    g.fillText(L0.from+" to "+LN.to,PADX,y); });
 
   put(TICKH,(g,y)=>{
     const base=y+TICKH-10;
@@ -1061,9 +1147,9 @@ function renderLegs(){
     row.innerHTML='<div class="lh"><span>Leg '+(i+1)+"</span>"+
       (cfg.legs.length>1?'<button type="button" class="tiny ghost" data-del>Remove</button>':"")+"</div>"+
       '<div class="row"><div><label for="lf'+i+'">From</label>'+
-      '<input id="lf'+i+'" data-f="from" value="'+(l.from||"")+'" maxlength="4" style="text-transform:uppercase"></div>'+
+      '<input id="lf'+i+'" data-f="from" placeholder="airport code (e.g. PHX)" value="'+(l.from||"")+'" maxlength="4" style="text-transform:uppercase"></div>'+
       '<div><label for="lt'+i+'">To</label>'+
-      '<input id="lt'+i+'" data-f="to" value="'+(l.to||"")+'" maxlength="4" style="text-transform:uppercase"></div></div>'+
+      '<input id="lt'+i+'" data-f="to" placeholder="airport code (e.g. CDG)" value="'+(l.to||"")+'" maxlength="4" style="text-transform:uppercase"></div></div>'+
       '<div class="row" style="margin-top:10px"><div><label for="ld'+i+'">Departs <em>&mdash; mm/dd/yyyy hh:mm am</em></label>'+
       '<input id="ld'+i+'" type="text" inputmode="numeric" autocomplete="off" data-f="dep" value="'+showWhen(l.dep)+'"></div>'+
       '<div><label for="la'+i+'">Arrives <em>&mdash; mm/dd/yyyy hh:mm am</em></label>'+
@@ -1260,7 +1346,7 @@ $("#build").addEventListener("click",()=>{
     if(!bad.length) bad.push.apply(bad,tripIssues());
     m.hidden=!bad.length;
     if(bad.length){ m.textContent=bad.join("   "); return; }
-    cfg.demo=false; save(); rebuild();
+    save(); rebuild();
     if(!plan){ m.hidden=false; m.textContent="Could not build a plan from those flights. Check the airports and times."; return; }
     go("plan");
   }catch(err){
@@ -1275,7 +1361,6 @@ $("#reset").addEventListener("click",()=>{
   $("#buildMsg").hidden=true;
   formFromCfg(); rebuild(); go("trip");
 });
-$("#icsShow").addEventListener("click",()=>{ $("#icsBox").hidden=!$("#icsBox").hidden; });
 $("#icsCopy").addEventListener("click",async()=>{
   const t=$("#icsText"), btn=$("#icsCopy");
   try{ await navigator.clipboard.writeText(t.value); btn.textContent="Copied"; }
@@ -1323,16 +1408,11 @@ async function exportIcs(btn){
     setTimeout(()=>URL.revokeObjectURL(url),4000);
     done(true);
   }catch(e){ done(false); }
-  $("#icsBox").hidden=false;
 }
 $("#icsDl").addEventListener("click",()=>exportIcs($("#icsDl")));
 $("#imgDl").addEventListener("click",async()=>{
   if(!planImgBlob) await buildPlanImage();
   if(planImgBlob) saveBlob(planImgBlob,"circadian-shift.png",$("#imgDl"),"Download the image");
-});
-$("#loadDemo").addEventListener("click",()=>{
-  cfg=JSON.parse(JSON.stringify(DEMO));
-  formFromCfg(); rebuild(); go("plan");
 });
 
 cfg=load();

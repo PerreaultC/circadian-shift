@@ -50,19 +50,18 @@ block is worth about 4 hours, more than any three days on the ground.
 
 ## Calibration
 
-**Nights 1–2 in both tables below are stale.** The prep-night pacing
-changed from a flat rate to a ramp after these tables were measured (see
-`CLAUDE.md`), so nights 1–2 in each direction no longer match current
-output — the ramp starts gentler and builds up, by design. The flight/travel
-night and everything after weren't touched and should still hold. Needs a
-fresh set of tables.
+**Nights 1–2 in both tables below are stale.** The prep-night pacing has
+changed twice since these tables were measured, and `prep` itself dropped
+from 4 nights to 3 (see `CLAUDE.md`), so nights 1–2 in each direction no
+longer match current output. The flight/travel night and everything after
+weren't touched and should still hold. Needs a fresh set of tables.
 
 The pacing, the livability brake and the sleep-the-flight rule were
-calibrated against a real Timeshifter plan for PHX→LHR (AA194, departing
-16:10, arriving 10:30 the next morning; 8 hours to advance). Running this
-engine on the same inputs:
+calibrated against a real plan from a commercial jet-lag app for PHX→LHR
+(AA194, departing 16:10, arriving 10:30 the next morning; 8 hours to
+advance). Running this engine on the same inputs:
 
-| Night | Timeshifter | This app | Difference |
+| Night | Commercial app | This app | Difference |
 |---|---|---|---|
 | 1 | 21:30 → 05:30 (−1.50 h) | 21:45 → 05:45 (−1.25 h) | 15 min |
 | 2 | 20:15 → 04:45 (−2.25 h) | 20:30 → 04:30 (−2.50 h) | 15 min |
@@ -78,7 +77,7 @@ The return leg (LHR→PHX, departing 16:10 and landing 19:05 the same day;
 8 hours to delay) was used as a second, independent check — and westbound
 turned out not to be a mirror of eastbound at all:
 
-| Night | Timeshifter | This app | Difference |
+| Night | Commercial app | This app | Difference |
 |---|---|---|---|
 | 1 | 23:15 → 07:45 (+0.75 h) | 00:15 → 08:15 (+1.25 h) | 30 min |
 | 2 | 00:15 → 08:45 (+1.75 h) | 01:30 → 09:30 (+2.50 h) | 45 min |
@@ -101,7 +100,7 @@ westbound-specific rules came out of this comparison:
   window that follows is sleep hygiene, not phase work, and is labelled
   as such.
 
-Timeshifter's own algorithm is proprietary; this is an independent
+That app's own algorithm is proprietary; this is an independent
 implementation of the same published science that lands in the same
 place, checked in both directions.
 

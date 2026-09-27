@@ -26,7 +26,9 @@ Script sections in `app-body.html` are numbered in comments: 1 airports,
 ## The science, in short
 
 Everything is anchored to **CBTmin**, the core body temperature minimum,
-taken as habitual wake minus 2 h. The light phase response curve pivots there:
+taken as habitual wake minus 3 h (per the Trip page's cited source and
+its underlying PRC studies — not the commonly-quoted "minus 2 h" rule of
+thumb). The light phase response curve pivots there:
 
 | Light lands | Effect | Use when flying |
 |---|---|---|
@@ -35,11 +37,35 @@ taken as habitual wake minus 2 h. The light phase response curve pivots there:
 
 Melatonin's curve runs ~12 h out of phase with light's, so evening melatonin
 advances. It is scheduled for eastward trips only; westward would need morning
-melatonin, which just makes you sleepy when you need to be awake.
+melatonin, which just makes you sleepy when you need to be awake. Dose is
+0.5 mg, taken 10 h before CBTmin. This is a primary-source number, not a
+citation once removed: Revell, Burgess, Gazda, Smith, Fogg & Eastman,
+"Advancing human circadian rhythms with afternoon melatonin and morning
+intermittent bright light" (*J Clin Endocrinol Metab* 2006;91(1):54-9) gave
+0.5 mg "5 h before baseline bedtime," advanced 1 h/day with the rest of the
+schedule exactly like `cbt` is — which for a normal night's sleep is
+`cbt-10*HOUR`, the same figure Burgess's book chapter cites this study for.
 
-Rates: advance 1.5 h/day, delay 2.5 h/day. Advances are capped at 1.5
-deliberately — past that the schedule outruns the clock and morning light
-starts landing *before* CBTmin, where it delays instead.
+That 2006 trial is also where the dose choice comes from: 0.5 mg and 3.0 mg
+produced statistically indistinguishable phase advances (2.5 h vs 2.6 h,
+p=0.79) when each was given at its own correct time (3.0 mg was dosed 7 h
+before bedtime, not 5 — Burgess, Revell, Molina & Eastman, "Human phase
+response curves to three days of daily melatonin: 0.5 mg versus 3.0 mg,"
+*J Clin Endocrinol Metab* 2010;95(7):3325-31, independently confirmed that
+higher doses need *earlier*, not later/closer-to-bed, timing). But the
+3.0 mg group in the 2006 trial "had slightly longer sleep latencies... and
+correspondingly poorer sleep efficiencies," which is why its authors
+recommended the lower dose: same phase-shifting benefit, worse sleep, no
+reason to take more. This caveat lives in the Trip page's tips list (not
+repeated per melatonin event) since it's exactly the kind of assumption a
+user would otherwise carry over incorrectly if they took a different dose.
+
+Rates: well-regulated (this app's only pace) advance 1.5 h/day, delay
+2.0 h/day; unregulated advance 1.0 h/day, delay 1.5 h/day — Burgess's own
+numbers (2011, Ch. 16), not the 2.5 h/day delay this file used to carry.
+Advances are capped at 1.5 deliberately — past that the schedule outruns
+the clock and morning light starts landing *before* CBTmin, where it
+delays instead.
 
 ## Rules that are not obvious
 
@@ -48,24 +74,28 @@ starts landing *before* CBTmin, where it delays instead.
   cap on this and it was removed deliberately. The only cap left is the
   calendar: extra prep days buy smaller nightly steps, not a bigger total
   shift.
-- **Prep nights ramp, they don't jump straight to the max rate.** A flat
-  `rate` every night (the original design) reaches further in the same
-  `prep` nights, but with no ramp-in at all — night one, furthest from
-  departure and least urgent, got exactly the same size step as the
-  night right before flying. Real-world comparison against Timeshifter
-  (2026-09-27, PHX→LHR, 22:00/06:00) showed it pacing far more gently at
-  first: our engine had night one blocking light at 18:30, four days out,
-  where Timeshifter was still near baseline. `preRamp(n)` now gives the
-  *cumulative* shift after `n` prep nights as a triangular-number
-  progression — `(rate/prep) * n * (n+1) / 2` — so the step size itself
-  grows linearly night over night and only the *last* prep night lands on
-  the safety-max `rate`; `maxPre` (the total achieved before departure)
-  is `preRamp(prep)`, capped by `total`. Since a ramp can't also hit the
-  old flat-rate ceiling in the same number of nights, this reaches *less*
-  before departure than the old formula did (e.g. 3.75 h vs. 6 h over 4
-  nights at a 1.5 h/day advance) — the remainder shifts onto the flight
-  and the nights after landing. This was one comparison, not a
-  recalibration; see "Calibration" below.
+- **Prep nights use a flat 1 h/day — never the safety ceiling.** This is
+  the one place the engine follows a cited source's actual numbers rather
+  than an inference: Burgess, "Using Bright Light and Melatonin to Reduce
+  Jet Lag" (2011, *Behavioral Treatments for Sleep Disorders*, Ch. 16 —
+  the source already named on the Trip page), states plainly that an
+  eastward traveler should "shift your habitual bed and wake times 1 hour
+  earlier per day" and a westward one "1 hour later per day," and her
+  Figure 16.2 example uses a **3-day** preflight shift. `prep` is 3, not
+  4. `prepRate` is a flat `1` in both directions, not derived from `rate`
+  — three earlier designs (a ramp, a flat rate at 2/3 of the safety
+  ceiling, and a night-one-is-baseline variant) were tried and walked
+  back for being unmoored from the literature, not just for looking too
+  aggressive. Eastman et al., "Advancing circadian rhythms before
+  eastward flight" (*Sleep* 2005;28(1):33-44) is the study behind the
+  book chapter's number: it directly compared 1 h/day against 2 h/day and
+  found the faster pace bought only a slightly bigger phase advance while
+  misaligning sleep, concluding 2 h/day "is not better... because it was
+  too fast." `rate` (1.5 h/day advance, 2 h/day delay) is the *outer
+  safety limit* for later nights, never the prep-night target.
+  `prepCum(n) = prepRate * n` is a flat per-night increment from night one
+  — no ramp, no baseline night. `maxPre` is `prepCum(prep)`, capped by
+  `total`; the remainder falls to the flight and the nights after landing.
 - **Home time zone is derived, not asked for.** `homeTz` in `buildPlan` is
   `legs[0].fromTz` — wherever the earliest-departing leg leaves from —
   computed after `legs` is sorted by departure time. There is no home-zone
@@ -87,9 +117,26 @@ starts landing *before* CBTmin, where it delays instead.
   apart — except on the flight-sleep cycle of a westbound trip landing in
   the morning, where they can end up close enough to collide. "Block
   light" is capped at the start of the afternoon window for exactly this
-  reason; it has no real Timeshifter example to check against, since the
-  one calibrated westbound route (`calibration.md`) lands in the evening
-  and never takes this branch.
+  reason; it has no real calibrated example to check against (the one
+  westbound route in `calibration.md` lands in the evening and never
+  takes this branch).
+- **Light windows run a full 4 h past CBTmin, both directions.** Burgess:
+  seek light "for at least the 4 hours after your Tmin" to advance, avoid
+  light "for at least the 4 hours after your Tmin" to delay (a different
+  clause from the one that governs seeking light before Tmin to delay).
+  The advance branch's "Bright light" event spans `wake` to `wake+4*HOUR`
+  (anchored to wake rather than cbt because the first 3 of those 4 hours
+  fall before waking, where you can't act on them anyway; `wake = cbt+3h`
+  makes this equivalent to `cbt` to `cbt+7h`, i.e. the mandated window plus
+  3 more hours once you're actually up). The delay branch's post-wake
+  "Block light" event, by contrast, must be anchored to `cbt` itself
+  (`darkTo = cbt+4*HOUR`, not `darkFrom+4*HOUR`): most of that window also
+  falls before waking (it's `cbt` to `cbt+4h = wake+1h`), but there is no
+  wake-anchored restatement for this side the way there is for advance's
+  morning light, so extending it to a fresh `wake+4h` — as this file did
+  until it was caught and fixed — overshot the actual rule by 3 hours.
+  The delay branch's own evening "Bright light" window (`nextBed-5.5h` to
+  `nextBed-1.5h`) was already the right 4 h and needed no change.
 - **Departure morning is set by the flight.** `DEF_LEAD = 5` h before take-off
   (time at the airport plus getting there and getting ready — not sleeping
   that close to a flight is a practicality rule, not a phase-science one).
@@ -105,6 +152,17 @@ starts landing *before* CBTmin, where it delays instead.
 Decisions the owner made explicitly. Treat these as settled unless he reopens
 them; several were arrived at by reversing an earlier choice.
 
+- **The intro is the owner's voice, not boilerplate.** The Trip page opens
+  with why he built this (an academic travelling on a tight schedule, no
+  luxury of arriving days early), when he actually uses it (outbound, not
+  the return leg — home is easier to re-entrain in), and three plain-language
+  notes on how to use it (it's the consistency that works, not sleeping
+  through "block light," and the calendar is the real mechanism, the picture
+  just a glance). It closes with a one-line privacy note and, at the very
+  bottom of the page, the actual sources the rules are drawn from
+  (Eastman & Burgess, Rush University). This replaced an earlier, much
+  thinner pitch line that was cut for being filler — the difference is
+  substance, not just length.
 - **The page is a generator, not a travel companion.** You build the plan once
   before the trip, export it, and close the tab. During the trip you live off
   calendar alerts. A web page cannot wake you at 04:00, and one you must
@@ -156,10 +214,13 @@ them; several were arrived at by reversing an earlier choice.
   field were all built and then removed. What survives: sleep hours, the
   flights. Everything else is fixed in `FIXED` / `DEF_LEAD`, or, for home
   time zone, derived from the flights themselves. Explanatory prose that
-  didn't earn its place either: the front-page pitch line, the iOS install
-  note, the medical disclaimer, the "starts 4 days before departure" filler,
-  and the live "X h before you fly ... Y nights to finish after you land"
-  preview under the sleep-hours fields are all gone too. The disclaimer's
+  didn't earn its place either: the iOS install note, the medical
+  disclaimer, the "starts 4 days before departure" filler, and the live
+  "X h before you fly ... Y nights to finish after you land" preview under
+  the sleep-hours fields are all gone too. The front-page pitch line was
+  also cut, then reinstated with real substance — the owner's own
+  reasons for building this (see "The intro is the owner's voice, not
+  boilerplate" below) — rather than restored as filler. The disclaimer's
   removal is the owner's own call, not a safety-review conclusion, so
   restore it without hesitation if this ever leaves personal use.
 - **Solid color bars, not ASCII.** This reverses the original "Pure ASCII
@@ -181,6 +242,24 @@ them; several were arrived at by reversing an earlier choice.
   a monospace grid the way character art did. The calendar download stays
   the one styled as the primary action; the picture is the take-away, not
   the mechanism.
+- **The picture's title is just the route.** It used to be
+  `"PHX -> LHR   advance 8 h at 1.5 h/day"` with a date-range subtitle below
+  it (`fmtDate` of the first and last row). Both are gone: the direction,
+  total, and rate are already the Strategy card's job in prose, and the
+  picture repeating them as a second, terser restatement wasn't adding
+  information, just a second place to keep in sync. `L0.from+" to "+LN.to`
+  is the whole title now; `fmtDate` was deleted as dead code once nothing
+  else called it.
+- **The legend only lists what's actually drawn.** `legendItems` used to be
+  a fixed list regardless of the plan; a westbound trip with no melatonin,
+  or an eastbound one with no nap, still got a swatch for it. It's now
+  filtered against a `usedKinds` set built from that plan's own `bars` and
+  `points`, so "In-flight nap" only appears on the westbound trips that
+  actually get one, and "Melatonin" only on the eastbound ones that do.
+- **Plan has two named sections, not an implicit split.** "Overview" (the
+  `imgCard`) and "Full breakdown" (`planList`) are real `<h2>`s now,
+  matching Strategy and Calendar export instead of the picture and the
+  day-by-day list just starting with no heading of their own.
 - **Hand-typed dates.** Native `datetime-local` / `time` pickers were removed
   as fiddly. Fields are plain text with forgiving parsers (`parseTime`,
   `parseWhen`) and canonical reformatting on blur.
@@ -188,20 +267,18 @@ them; several were arrived at by reversing an earlier choice.
 
 ## Calibration
 
-**Stale as of the prep-night ramp (see "Rules that are not obvious"
-above).** The validated numbers below — flight night exact, every other
-night within 15 min — were measured against the old flat-rate prep
-formula. The ramp changes every pre-flight night's timing by design (that
-was the point), so the pre-flight nights in `calibration.md` and the
-tables in `README.md` no longer match current output; the flight night
-and everything from landing onward should be unaffected, since neither
-was touched. Needs a fresh comparison run before that "validated" claim
-is reinstated for the pre-flight portion.
+**Stale throughout.** The pre-flight formula and the CBTmin anchor have
+both changed since these numbers were measured (see "Rules that are not
+obvious" and "The science" above: `prep`, `prepRate`, and CBTmin =
+wake − 3 h rather than − 2 h all moved), so even the flight night's exact
+match no longer applies — CBTmin shifting by an hour shifts every
+absolute time in the comparison. Needs a fresh comparison run before any
+"validated" claim is reinstated.
 
-Originally validated against real Timeshifter plans for PHX↔LHR. On
-Timeshifter's own inputs (23:00–07:00) the flight night matched exactly
-and every other night was within 15 min; both plans ended on the same
-calendar day in both directions. Full tables in `README.md`; the raw
+Originally validated against real plans from a commercial jet-lag app for
+PHX↔LHR, on that app's own inputs (23:00–07:00): the flight night matched
+exactly and every other night was within 15 min; both plans ended on the
+same calendar day in both directions. Full tables in `README.md`; the raw
 screenshot transcriptions and the derivation are in `calibration.md`.
 
 ## Testing
